@@ -11,7 +11,8 @@
     <div class="login-container" id="loginContainer">
     <h2>Ingreso UTLVTE</h2>
     <div class="welcome-message" id="welcomeMessage">Bienvenido</div>
-    <form action="/login" method="POST" id="loginForm">
+
+    <form action="login.php" method="POST" id="loginForm">
       <div class="form-group">
         <label for="username">Usuario</label>
         <input type="text" id="username" name="username" required>
