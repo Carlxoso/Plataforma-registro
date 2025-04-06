@@ -1,34 +1,41 @@
 <?php
 // Conexión a la base de datos
 $host = "localhost";
-$usuario = "root";        // Cambia esto si tu usuario es diferente
-$contrasena = "";         // Cambia esto si tienes contraseña
-$baseDeDatos = "vendetors"; // Asegúrate de usar guiones bajos en lugar de espacios
+$usuario = "root";
+$contrasena = "";
+$baseDeDatos = "vendetors";
 
 $conexion = new mysqli($host, $usuario, $contrasena, $baseDeDatos);
 
-// Verifica la conexión
 if ($conexion->connect_error) {
     die("Conexión fallida: " . $conexion->connect_error);
 }
 
-// Obtener los datos del formulario
+// Recibir datos del formulario
 $username = $_POST['username'];
 $password = $_POST['password'];
 $role = $_POST['role'];
 
-// Consulta para verificar usuario
+// Consulta
 $sql = "SELECT * FROM usuarios WHERE username = '$username' AND password = '$password' AND role = '$role'";
 $resultado = $conexion->query($sql);
 
 if ($resultado->num_rows > 0) {
-    // Usuario válido
-    echo "Inicio de sesión exitoso como $role";
-    // Aquí puedes redirigir a otra página, por ejemplo:
-    // header("Location: dashboard.php");
+    // Si el usuario es admin, redirige
+    if ($role === 'admin') {
+        header("Location: admin.html");
+        exit();
+    } else {
+        // También puedes redirigir al usuario normal si lo deseas
+        header("Location: usuario.html");
+        exit();
+    }
 } else {
-    // Usuario no válido
-    echo "Usuario o contraseña incorrectos";
+    // Si no coincide, vuelve al login con mensaje de error
+    echo "<script>
+        alert('Usuario o contraseña incorrectos');
+        window.history.back();
+    </script>";
 }
 
 $conexion->close();
