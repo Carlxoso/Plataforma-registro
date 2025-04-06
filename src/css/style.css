@@ -1,63 +1,104 @@
 body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #4d6f4fb3, #186c1c);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #b3e8b54b, #186c1c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    overflow: hidden;
+  }
 
-    .login-container {
-      background: white;
-      padding: 2rem;
-      border-radius: 1rem;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-      max-width: 400px;
-      width: 100%;
-    }
+  .login-container {
+    background: rgba(255, 255, 255, 0.596);
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 100%;
+    transition: transform 0.5s ease;
+  }
 
-    .login-container h2 {
-      text-align: center;
-      margin-bottom: 1.5rem;
-      color: #1f2937;
-    }
+  .login-container h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: #000000;
+  }
 
-    .form-group {
-      margin-bottom: 1rem;
-    }
+  .form-group {
+    margin-bottom: 1rem;
+  }
 
-    .form-group label {
-      display: block;
-      margin-bottom: 0.5rem;
-      color: #374151;
-    }
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #000000;
+  }
 
-    .form-group input, .form-group select {
-      width: 100%;
-      padding: 0.5rem;
-      border: 1px solid #d1d5db;
-      border-radius: 0.5rem;
-      outline: none;
-      transition: border-color 0.3s;
-    }
+  .form-group input {
+    width: 96%;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    outline: none;
+    transition: border-color 0.3s;
+  }
 
-    .form-group input:focus, .form-group select:focus {
-      border-color: #3b82f6;
-    }
+  .form-group input:focus {
+    border-color: #3b82f6;
+  }
 
-    .btn {
-      width: 100%;
-      padding: 0.75rem;
-      background-color: #3b82f6;
-      color: white;
-      border: none;
-      border-radius: 0.5rem;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
+  .role-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 10px;
+  }
 
-    .btn:hover {
-      background-color: #2563eb;
-    }
+  .role-button {
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background-color: white;
+    color: #374151;
+    cursor: pointer;
+    flex: 1;
+    text-align: center;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  .role-button:hover {
+    background-color: #186c1c;
+    color: white;
+  }
+
+  .role-button.active {
+    background-color: #3a6f3d;
+    color: white;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #186c1c;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+
+  .btn:hover {
+    background-color: #3a6f3d;
+  }
+
+  .welcome-message {
+    text-align: center;
+    font-size: 1.2rem;
+    margin-top: 1rem;
+    color: #ffffff;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }

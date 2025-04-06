@@ -8,9 +8,10 @@
 
 </head>
 <body>
-  <div class="login-container">
+    <div class="login-container" id="loginContainer">
     <h2>Ingreso UTLVTE</h2>
-    <form action="/login" method="POST">
+    <div class="welcome-message" id="welcomeMessage">Bienvenido</div>
+    <form action="/login" method="POST" id="loginForm">
       <div class="form-group">
         <label for="username">Usuario</label>
         <input type="text" id="username" name="username" required>
@@ -19,16 +20,17 @@
         <label for="password">Contraseña</label>
         <input type="password" id="password" name="password" required>
       </div>
-      <div class="form-group">
-        <label for="role">Tipo de Usuario</label>
-        <select id="role" name="role" required>
-          <option value="">Seleccionar</option>
-          <option value="admin">Administrador</option>
-          <option value="user">Usuario</option>
-        </select>
+      <div class="role-buttons">
+        <button type="button" class="role-button" id="adminBtn">Administrador</button>
+        <button type="button" class="role-button" id="userBtn">Usuario</button>
       </div>
+      <input type="hidden" id="role" name="role" value="">
+
       <button type="submit" class="btn">Ingresar</button>
     </form>
   </div>
+
+    <script src="js/scripts.js"></script>
+  
 </body>
 </html>
