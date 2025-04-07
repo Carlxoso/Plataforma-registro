@@ -102,3 +102,15 @@ body {
     opacity: 0;
     transition: opacity 0.5s ease;
   }
+
+  .logo-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+  
+  .logo {
+    max-width: 120px;
+    height: auto;
+  }
+  

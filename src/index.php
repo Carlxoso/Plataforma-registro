@@ -5,11 +5,16 @@
   <link rel="stylesheet" href="css/style.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registro de vendedores</title>
-
 </head>
 <body>
-    <div class="login-container" id="loginContainer">
-    <h2>Ingreso UTLVTE</h2>
+
+  <div class="login-container" id="loginContainer">
+    <!-- Logo dentro del cuadro -->
+    <div class="logo-container">
+      <img src="assets/img/escudoutlvte.png" alt="Logo UTLVTE" class="logo">
+    </div>
+
+    <h2>Registro Utlvte</h2>
     <div class="welcome-message" id="welcomeMessage">Bienvenido</div>
 
     <form action="login.php" method="POST" id="loginForm">
@@ -31,7 +36,6 @@
     </form>
   </div>
 
-    <script src="js/scripts.js"></script>
-  
+  <script src="js/scripts.js"></script>
 </body>
 </html>

@@ -1,42 +1,61 @@
 <?php
-// Conexión a la base de datos
-$host = "localhost";
-$usuario = "root";
-$contrasena = "";
-$baseDeDatos = "vendetors";
+session_start();
+include 'conexion.php';
 
-$conexion = new mysqli($host, $usuario, $contrasena, $baseDeDatos);
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $username = trim($_POST['username']);
+    $password = trim($_POST['password']);
 
-if ($conexion->connect_error) {
-    die("Conexión fallida: " . $conexion->connect_error);
-}
-
-// Recibir datos del formulario
-$username = $_POST['username'];
-$password = $_POST['password'];
-$role = $_POST['role'];
-
-// Consulta
-$sql = "SELECT * FROM usuarios WHERE username = '$username' AND password = '$password' AND role = '$role'";
-$resultado = $conexion->query($sql);
-
-if ($resultado->num_rows > 0) {
-    // Si el usuario es admin, redirige
-    if ($role === 'admin') {
-        header("Location: admin.html");
-        exit();
-    } else {
-        // También puedes redirigir al usuario normal si lo deseas
-        header("Location: usuario.html");
+    // Verificamos que los campos no estén vacíos
+    if (empty($username) || empty($password)) {
+        echo "<script>
+            alert('Por favor, ingresa usuario y contraseña.');
+            window.location.href = 'login.php';
+        </script>";
         exit();
     }
-} else {
-    // Si no coincide, vuelve al login con mensaje de error
-    echo "<script>
-        alert('Usuario o contraseña incorrectos');
-        window.history.back();
-    </script>";
-}
 
-$conexion->close();
+    $stmt = $conn->prepare("SELECT * FROM usuarios WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $resultado = $stmt->get_result();
+
+    if ($resultado->num_rows > 0) {
+        $usuario = $resultado->fetch_assoc();
+
+        if ($password === $usuario['password']) {
+            $_SESSION['username'] = $usuario['username'];
+            $_SESSION['role'] = $usuario['role'];
+
+            if ($usuario['role'] === 'admin') {
+                echo "<script>
+                    alert('¡Has iniciado sesión correctamente como administrador!');
+                    window.location.href = 'administrador.php';
+                </script>";
+                exit();
+            } else {
+                echo "<script>
+                    alert('¡Has iniciado sesión correctamente como usuario!');
+                    window.location.href = 'usuario.php';
+                </script>";
+                exit();
+            }
+        } else {
+            echo "<script>
+                alert('Usuario o contraseña incorrectos');
+                window.location.href = 'index.php';
+            </script>";
+            exit();
+        }
+    } else {
+        echo "<script>
+            alert('Usuario o contraseña incorrectos');
+            window.location.href = 'index.php';
+        </script>";
+        exit();
+    }
+
+    $stmt->close();
+    $conn->close();
+}
 ?>
