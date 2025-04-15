@@ -49,8 +49,23 @@ if (isset($_GET['borrar'])) {
     echo "<script>alert('Vendedor eliminado correctamente'); window.location.href='administrador.php';</script>";
 }
 
-// Obtener todos los registros
-$resultado = $conn->query("SELECT * FROM vendedores");
+// Obtener orden de filtro si se ha seleccionado
+$orden = isset($_GET['orden']) ? $_GET['orden'] : '';
+
+// Construir la consulta con el orden correspondiente
+$consulta = "SELECT * FROM vendedores";
+switch ($orden) {
+    case 'nombre':
+        $consulta .= " ORDER BY nombre ASC";
+        break;
+    case 'entrada':
+        $consulta .= " ORDER BY entrada ASC";
+        break;
+    case 'salida':
+        $consulta .= " ORDER BY salida ASC";
+        break;
+}
+$resultado = $conn->query($consulta);
 ?>
 
 <!DOCTYPE html>
@@ -59,177 +74,10 @@ $resultado = $conn->query("SELECT * FROM vendedores");
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de registros</title>
+    <link rel="stylesheet" href="css/styleadmin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-        }
-
-        /* Menú lateral */
-        .sidebar {
-            width: 250px;
-            height: 100vh;
-            background-color: #333;
-            position: fixed;
-            left: 0;
-            top: 0;
-            padding-top: 30px;
-            color: white;
-            transition: all 0.3s;
-        }
-
-        .sidebar .logo {
-            display: flex;
-            align-items: center;
-            padding: 20px;
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .sidebar .logo img {
-            width: 40px;
-            height: 40px;
-            margin-right: 10px;
-        }
-
-        .sidebar ul {
-            padding: 0;
-            list-style: none;
-        }
-
-        .sidebar ul li {
-            padding: 15px 20px;
-            text-align: left;
-        }
-
-        .sidebar ul li a {
-            color: white;
-            text-decoration: none;
-            display: block;
-        }
-
-        .sidebar ul li a:hover {
-            background-color: #444;
-        }
-
-        .main-content {
-            margin-left: 250px;
-            padding: 20px;
-            width: 100%;
-            background-color: #f4f4f9;
-        }
-
-        .logout-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: #e74c3c;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        form, table {
-            margin: auto;
-            width: 90%;
-            max-width: 1200px;
-        }
-
-        input[type="text"], input[type="time"] {
-            padding: 8px;
-            margin: 5px 0;
-            width: 100%;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-
-        table {
-            margin-top: 30px;
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.27);
-        }
-
-        th, td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #ddd;
-            text-align: center;
-        }
-
-        th {
-            background-color: #3498db;
-            color: white;
-        }
-
-        tr:hover {
-            background-color:rgb(255, 255, 255);
-        }
-
-        button {
-            padding: 6px 12px;
-            margin: 2px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .btn-agregar {
-            background-color: #2ecc71;
-            color: white;
-        }
-
-        .btn-editar {
-            background-color: #f39c12;
-            color: white;
-        }
-
-        .btn-borrar {
-            background-color: #e74c3c;
-            color: white;
-        }
-
-        .form-group {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-        }
-
-        /* Menu de hamburguesa */
-        .menu-toggle {
-            display: none;
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                left: -250px;
-            }
-
-            .sidebar.active {
-                left: 0;
-            }
-
-            .menu-toggle {
-                display: block;
-                position: absolute;
-                top: 20px;
-                left: 20px;
-                font-size: 30px;
-                cursor: pointer;
-            }
-
-            .main-content {
-                margin-left: 0;
-            }
-        }
-    </style>
+    
+    
 </head>
 <body>
 
@@ -240,7 +88,7 @@ $resultado = $conn->query("SELECT * FROM vendedores");
         </div>
         <ul>
             <li><a href="administrador.php">Ver registros actuales</a></li>
-            <li><a href="administrador.php?agregar_registro=true">Agregar un nuevo registro</a></li> <!-- Enlace actualizado -->
+            <li><a href="administrador.php?agregar_registro=true">Agregar un nuevo registro</a></li>
         </ul>
     </div>
 
@@ -274,7 +122,23 @@ $resultado = $conn->query("SELECT * FROM vendedores");
                     <th>Entrada</th>
                     <th>Salida</th>
                     <th>Producto</th>
-                    <th>Acciones</th>
+                    <th colspan="2" style="position: relative; text-align: center;">
+    Acciones
+    <div style="display: inline-block; position: relative; margin-left: 21px;">
+        <button type="button" onclick="toggleFiltro()" style="background: white; border: 1px solid #ccc; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 16px;">
+            <i class="fas fa-filter" style="color: #333;"></i>
+        </button>
+        <div id="filtro-menu" style="display: none; position: absolute; top: 42px; right: 0; background: white; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); z-index: 999;">
+            <form method="GET" style="margin: 0; padding: 8px;">
+                <button type="submit" name="orden" value="nombre" style="display: block; background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer;">Nombre (A-Z)</button>
+                <button type="submit" name="orden" value="entrada" style="display: block; background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer;">Entrada</button>
+                <button type="submit" name="orden" value="salida" style="display: block; background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer;">Salida</button>
+            </form>
+        </div>
+    </div>
+</th>
+
+
                 </tr>
                 <?php while ($row = $resultado->fetch_assoc()) { ?>
                     <tr>
@@ -287,6 +151,8 @@ $resultado = $conn->query("SELECT * FROM vendedores");
                             <td><input type="text" name="producto" value="<?= $row['producto'] ?>"></td>
                             <td>
                                 <button type="submit" name="editar" class="btn-editar">Editar</button>
+                            </td>
+                            <td>
                                 <a href="administrador.php?borrar=<?= $row['id'] ?>" onclick="return confirm('¿Estás seguro de borrar este registro?');">
                                     <button type="button" class="btn-borrar">Borrar</button>
                                 </a>
@@ -303,11 +169,20 @@ $resultado = $conn->query("SELECT * FROM vendedores");
     </div>
 
     <script>
-        // Función para mostrar y ocultar el menú en dispositivos móviles
-        function toggleMenu() {
-            const sidebar = document.querySelector('.sidebar');
-            sidebar.classList.toggle('active');
+    function toggleFiltro() {
+        const menu = document.getElementById("filtro-menu");
+        menu.style.display = menu.style.display === "block" ? "none" : "block";
+    }
+
+    // Cierra el menú si se hace clic fuera
+    document.addEventListener('click', function(event) {
+        const filtro = document.getElementById("filtro-menu");
+        const button = event.target.closest("button");
+        if (!filtro.contains(event.target) && (!button || !button.innerHTML.includes("filter"))) {
+            filtro.style.display = "none";
         }
-    </script>
+    });
+</script>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
 </body>
 </html>
