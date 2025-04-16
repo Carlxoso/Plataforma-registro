@@ -14,7 +14,8 @@
       <img src="assets/img/escudoutlvte.png" alt="Logo UTLVTE" class="logo">
     </div>
 
-    <h2>Registro Utlvte</h2>
+    <h2>Registro de vendedores informales UTLVTE</h2>
+  
     <div class="welcome-message" id="welcomeMessage">Bienvenido</div>
 
     <form action="login.php" method="POST" id="loginForm">
