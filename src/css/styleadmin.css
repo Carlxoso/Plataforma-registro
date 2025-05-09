@@ -3,6 +3,9 @@ body {
     margin: 0;
     padding: 0;
     display: flex;
+    background-color: #f4f4f9;
+    min-height: 100vh;
+    box-sizing: border-box;
 }
 
 .sidebar {
@@ -15,6 +18,7 @@ body {
     padding-top: 30px;
     color: white;
     transition: all 0.3s;
+    z-index: 1000;
 }
 
 .sidebar .logo {
@@ -53,8 +57,10 @@ body {
 .main-content {
     margin-left: 250px;
     padding: 20px;
-    width: 100%;
+    width: calc(100% - 250px);
     background-color: #f4f4f9;
+    min-height: 100vh;
+    box-sizing: border-box;
 }
 
 .logout-btn {
@@ -75,9 +81,9 @@ form, table {
     max-width: 1200px;
 }
 
-input[type="text"], input[type="time"] {
+input[type="text"], input[type="time"], select {
     padding: 8px;
-    margin: 5px 0;
+    margin: 10px 0;
     width: 100%;
     border-radius: 5px;
     border: 1px solid #ccc;
@@ -97,6 +103,7 @@ th, td {
     padding: 12px 15px;
     border-bottom: 1px solid #ddd;
     text-align: center;
+    vertical-align: middle;
 }
 
 th {
@@ -105,12 +112,12 @@ th {
 }
 
 tr:hover {
-    background-color: rgb(255, 255, 255);
+    background-color: #f0f0f0;
 }
 
 button {
     padding: 6px 12px;
-    margin: 2px;
+    margin: 5px 0;
     border: none;
     border-radius: 5px;
     cursor: pointer;
@@ -131,10 +138,29 @@ button {
     color: white;
 }
 
+.btn-qr {
+    background-color: #3498db;
+    color: white;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 5px;
+}
+
+.qr-container {
+    margin-top: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 110px;
+}
+
+/* Cambios para un formulario completamente vertical */
 .form-group {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
+    display: flex;
+    flex-direction: column;  /* Asegura que los campos estén dispuestos verticalmente */
+    gap: 20px;  /* Espaciado entre los elementos del formulario */
 }
 
 select {
@@ -162,9 +188,174 @@ select {
         left: 20px;
         font-size: 30px;
         cursor: pointer;
+        z-index: 1001;
     }
 
     .main-content {
         margin-left: 0;
+        width: 100%;
+    }
+
+    table {
+        font-size: 14px;
     }
 }
+
+td button.btn-qr {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 5px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: center;
+}
+
+#modalQR {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    position: relative;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+}
+
+#qrcode {
+    margin: 0 auto;  /* Asegura que el QR esté centrado */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.close-btn:hover,
+.close-btn:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Estilos para el modal flotante de edición */
+.modalEditar {
+    display: none; /* Inicialmente oculto */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Fondo semi-transparente */
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 400px;
+    max-width: 80%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.close-btn {
+    font-size: 30px;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+}
+
+
+/* Formulario de agregar nuevo registro */
+.form-container {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 600px;
+    margin: 0 auto 40px auto; /* <- margen inferior para evitar colisión */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.form-container h2 {
+    margin-bottom: 30px;
+    font-size: 24px;
+    font-weight: bold;
+    color: #3498db;
+}
+
+/* Campos del formulario */
+.form-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.field-wrapper {
+    flex: 1 1 45%;
+    display: flex;
+    flex-direction: column;
+}
+
+
+.field-wrapper label {
+    font-size: 14px;
+    color: #333;
+    font-weight: bold;
+}
+
+input[type="text"], input[type="time"] {
+    padding: 12px;
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+}
+
+input[type="text"]:focus, input[type="time"]:focus {
+    border-color: #3498db;
+    outline: none;
+}
+
+.btn-agregar {
+    padding: 12px;
+    background-color: #3498db;
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 20px;
+    width: 100%; /* Solo aplica aquí */
+}
+
+.btn-agregar:hover {
+    background-color: #2980b9;
+}
+
+

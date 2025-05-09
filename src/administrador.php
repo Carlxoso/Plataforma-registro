@@ -8,6 +8,7 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
+
 // Agregar vendedor
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['agregar'])) {
     $nombre = $_POST['nombre'];
@@ -16,12 +17,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['agregar'])) {
     $salida = $_POST['salida'];
     $producto = $_POST['producto'];
 
-    $stmt = $conn->prepare("INSERT INTO vendedores (nombre, dia, entrada, salida, producto) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssss", $nombre, $dia, $entrada, $salida, $producto);
+    // Verificar si el nombre ya existe
+    $stmt = $conn->prepare("SELECT id FROM vendedores WHERE nombre = ?");
+    $stmt->bind_param("s", $nombre);
     $stmt->execute();
-    $stmt->close();
-    echo "<script>alert('Vendedor agregado correctamente'); window.location.href='administrador.php';</script>";
+    $stmt->store_result();
+
+    if ($stmt->num_rows > 0) {
+        // Ya existe un vendedor con ese nombre
+        $stmt->close();
+        echo "<script>alert('Error: Ya existe un vendedor con ese nombre'); window.location.href='administrador.php?agregar_registro=true';</script>";
+    } else {
+        $stmt->close();
+        // Insertar nuevo registro
+        $stmt = $conn->prepare("INSERT INTO vendedores (nombre, dia, entrada, salida, producto) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssss", $nombre, $dia, $entrada, $salida, $producto);
+        $stmt->execute();
+        $stmt->close();
+        echo "<script>alert('Vendedor agregado correctamente'); window.location.href='administrador.php';</script>";
+    }
 }
+
 
 // Editar vendedor
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['editar'])) {
@@ -76,8 +92,7 @@ $resultado = $conn->query($consulta);
     <title>Panel de registros</title>
     <link rel="stylesheet" href="css/styleadmin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -102,65 +117,98 @@ $resultado = $conn->query($consulta);
         <h1>Panel de información general.</h1>
 
         <?php if (isset($_GET['agregar_registro']) && $_GET['agregar_registro'] == 'true') { ?>
-            <!-- Agregar registro -->
-            <form method="POST">
-                <div class="form-group">
-                    <input type="text" name="nombre" placeholder="Nombre" required>
-                    <input type="text" name="dia" placeholder="Día" required>
-                    <input type="time" name="entrada" required>
-                    <input type="time" name="salida" required>
-                    <input type="text" name="producto" placeholder="Producto" required>
-                </div>
-                <button type="submit" name="agregar" class="btn-agregar">Agregar</button>
-            </form>
+            
+<!-- Agregar registro -->
+<form method="POST">
+    <div class="form-container">
+        <h2>Agregar un Nuevo Registro</h2>
+        <div class="form-group">
+            <div class="field-wrapper">
+                <label for="nombre">Nombre:</label>
+                <input type="text" name="nombre" id="nombre" placeholder="Nombre" required>
+            </div>
+            <div class="field-wrapper">
+                <label for="dia">Día:</label>
+                <input type="text" name="dia" id="dia" placeholder="Día" required>
+            </div>
+            <div class="field-wrapper">
+                <label for="entrada">Hora de Entrada:</label>
+                <input type="time" name="entrada" id="entrada" required>
+            </div>
+            <div class="field-wrapper">
+                <label for="salida">Hora de Salida:</label>
+                <input type="time" name="salida" id="salida" required>
+            </div>
+            <div class="field-wrapper">
+                <label for="producto">Producto:</label>
+                <input type="text" name="producto" id="producto" placeholder="Producto" required>
+            </div>
+        </div>
+        <button type="submit" name="agregar" class="btn-agregar">Agregar</button>
+    </div>
+</form>
+
+
         <?php } else { ?>
+
             <!-- Tabla de registros -->
-            <table>
-                <tr>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background-color: #3498db; color: white;">
                     <th>Nombre</th>
                     <th>Día</th>
                     <th>Entrada</th>
                     <th>Salida</th>
                     <th>Producto</th>
-                    <th colspan="2" style="position: relative; text-align: center;">
-    Acciones
-    <div style="display: inline-block; position: relative; margin-left: 21px;">
-        <button type="button" onclick="toggleFiltro()" style="background: white; border: 1px solid #ccc; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 16px;">
-            <i class="fas fa-filter" style="color: #333;"></i>
-        </button>
-        <div id="filtro-menu" style="display: none; position: absolute; top: 42px; right: 0; background: white; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); z-index: 999;">
-            <form method="GET" style="margin: 0; padding: 8px;">
-                <button type="submit" name="orden" value="nombre" style="display: block; background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer;">Nombre (A-Z)</button>
-                <button type="submit" name="orden" value="entrada" style="display: block; background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer;">Entrada</button>
-                <button type="submit" name="orden" value="salida" style="display: block; background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer;">Salida</button>
-            </form>
-        </div>
-    </div>
-</th>
-
-
+                    <th>QR</th>
+                    <th>Eliminar</th>
+                    <th>Editar</th>
+                    <th>
+                        <div style="display: flex; align-items: center; justify-content: center;">
+                            <span>Filtrar</span>
+                            <div style="position: relative; margin-left: 8px;">
+                                <button type="button" onclick="toggleFiltro()" style="background: white; border: 1px solid #ccc; padding: 6px 10px; border-radius: 6px; cursor: pointer;">
+                                    <i class="fas fa-filter" style="color: #333;"></i>
+                                </button>
+                                <div id="filtro-menu" style="display: none; position: absolute; top: 42px; right: 0; background: white; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); z-index: 999;">
+                                    <form method="GET" style="margin: 0; padding: 8px;">
+                                        <button type="submit" name="orden" value="nombre" style="display: block; background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer;">Nombre (A-Z)</button>
+                                        <button type="submit" name="orden" value="entrada" style="display: block; background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer;">Entrada</button>
+                                        <button type="submit" name="orden" value="salida" style="display: block; background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer;">Salida</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </th>
                 </tr>
+
                 <?php while ($row = $resultado->fetch_assoc()) { ?>
                     <tr>
                         <form method="POST">
                             <input type="hidden" name="id" value="<?= $row['id'] ?>">
-                            <td><input type="text" name="nombre" value="<?= $row['nombre'] ?>"></td>
-                            <td><input type="text" name="dia" value="<?= $row['dia'] ?>"></td>
-                            <td><input type="time" name="entrada" value="<?= $row['entrada'] ?>"></td>
-                            <td><input type="time" name="salida" value="<?= $row['salida'] ?>"></td>
-                            <td><input type="text" name="producto" value="<?= $row['producto'] ?>"></td>
-                            <td>
-                                <button type="submit" name="editar" class="btn-editar">Editar</button>
+                            <td><?= htmlspecialchars($row['nombre']) ?></td>
+                            <td><?= htmlspecialchars($row['dia']) ?></td>
+                            <td><?= htmlspecialchars($row['entrada']) ?></td>
+                            <td><?= htmlspecialchars($row['salida']) ?></td>
+                            <td><?= htmlspecialchars($row['producto']) ?></td>
+
+                            <td style="min-width: 120px;">
+                                <button class="btn-qr" onclick="mostrarQR(event, 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?= urlencode($row['nombre']); ?>')" style="padding: 5px 10px; font-size: 13px;">Ver QR</button>
                             </td>
-                            <td>
+
+                            <td style="min-width: 120px;">
                                 <a href="administrador.php?borrar=<?= $row['id'] ?>" onclick="return confirm('¿Estás seguro de borrar este registro?');">
                                     <button type="button" class="btn-borrar">Borrar</button>
                                 </a>
+                            </td>
+
+                            <td style="min-width: 120px;">
+                                <button type="button" class="btn-editar" onclick="abrirEdicion(<?= $row['id'] ?>, '<?= htmlspecialchars($row['nombre']) ?>', '<?= htmlspecialchars($row['dia']) ?>', '<?= htmlspecialchars($row['entrada']) ?>', '<?= htmlspecialchars($row['salida']) ?>', '<?= htmlspecialchars($row['producto']) ?>')">Editar</button>
                             </td>
                         </form>
                     </tr>
                 <?php } ?>
             </table>
+
         <?php } ?>
 
         <form method="POST" action="logout.php">
@@ -168,21 +216,68 @@ $resultado = $conn->query($consulta);
         </form>
     </div>
 
+    <!-- Modal para mostrar QR -->
+    <div id="modalQR" class="modalQR">
+        <div class="modal-content">
+            <span class="close-btn" onclick="cerrarQR()">&times;</span>
+            <h2>Código QR</h2>
+            <div id="qrcode"></div>
+        </div>
+    </div>
+
+    <!-- Modal para editar -->
+    <div id="modalEditar" class="modalEditar">
+        <div class="modal-content">
+            <span class="close-btn" onclick="cerrarEdicion()">&times;</span>
+            <h2>Editar Vendedor</h2>
+            <form id="formEditar" method="POST">
+                <input type="hidden" name="id" id="edit-id">
+                <input type="text" name="nombre" id="edit-nombre" required>
+                <input type="text" name="dia" id="edit-dia" required>
+                <input type="time" name="entrada" id="edit-entrada" required>
+                <input type="time" name="salida" id="edit-salida" required>
+                <input type="text" name="producto" id="edit-producto" required>
+                <button type="submit" name="editar" class="btn-editar">Actualizar</button>
+            </form>
+        </div>
+    </div>
+
     <script>
-    function toggleFiltro() {
-        const menu = document.getElementById("filtro-menu");
-        menu.style.display = menu.style.display === "block" ? "none" : "block";
+    function mostrarQR(event, data) {
+        event.preventDefault();  
+        const modal = document.getElementById('modalQR');
+        modal.style.display = 'flex'; 
+
+        document.getElementById('qrcode').innerHTML = '';
+        new QRCode(document.getElementById("qrcode"), {
+            text: data,
+            width: 150,
+            height: 150
+        });
     }
 
-    // Cierra el menú si se hace clic fuera
-    document.addEventListener('click', function(event) {
-        const filtro = document.getElementById("filtro-menu");
-        const button = event.target.closest("button");
-        if (!filtro.contains(event.target) && (!button || !button.innerHTML.includes("filter"))) {
-            filtro.style.display = "none";
-        }
-    });
-</script>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+    function cerrarQR() {
+        const modal = document.getElementById('modalQR');
+        modal.style.display = 'none'; 
+    }
+
+    function abrirEdicion(id, nombre, dia, entrada, salida, producto) {
+        const modal = document.getElementById('modalEditar');
+        document.getElementById('edit-id').value = id;
+        document.getElementById('edit-nombre').value = nombre;
+        document.getElementById('edit-dia').value = dia;
+        document.getElementById('edit-entrada').value = entrada;
+        document.getElementById('edit-salida').value = salida;
+        document.getElementById('edit-producto').value = producto;
+        modal.style.display = 'flex'; // Modal flotante centrado
+    }
+
+    function cerrarEdicion() {
+        const modal = document.getElementById('modalEditar');
+        modal.style.display = 'none'; // Cerrar modal flotante
+    }
+    </script>
+
+    
 </body>
 </html>
