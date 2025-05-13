@@ -93,10 +93,17 @@ $resultado = $conn->query($consulta);
     <link rel="stylesheet" href="css/styleadmin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 </head>
 <body>
 
+    <div class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('active')">
+    <i class="fas fa-bars"></i>
+</div>
+
     <!-- Sidebar -->
+     
     <div class="sidebar">
         <div class="logo">
             <img src="assets/img/userlogo.png" alt="Admin Logo"> Administrador
@@ -153,6 +160,7 @@ $resultado = $conn->query($consulta);
 
             <!-- Tabla de registros -->
             <table style="width: 100%; border-collapse: collapse;">
+
                 <tr style="background-color: #3498db; color: white;">
                     <th>Nombre</th>
                     <th>Día</th>
@@ -164,7 +172,7 @@ $resultado = $conn->query($consulta);
                     <th>Editar</th>
                     <th>
                         <div style="display: flex; align-items: center; justify-content: center;">
-                            <span>Filtrar</span>
+                            
                             <div style="position: relative; margin-left: 8px;">
                                 <button type="button" onclick="toggleFiltro()" style="background: white; border: 1px solid #ccc; padding: 6px 10px; border-radius: 6px; cursor: pointer;">
                                     <i class="fas fa-filter" style="color: #333;"></i>
@@ -277,6 +285,24 @@ $resultado = $conn->query($consulta);
         modal.style.display = 'none'; // Cerrar modal flotante
     }
     </script>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const menuToggle = document.querySelector(".menu-toggle");
+        const sidebar = document.querySelector(".sidebar");
+
+        // Verifica si los elementos existen
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener("click", function () {
+                sidebar.classList.toggle("active");
+            });
+        } else {
+            console.log("No se encontraron los elementos necesarios para el menú.");
+        }
+    });
+</script>
+
+
 
     
 </body>

@@ -18,5 +18,3 @@ userBtn.addEventListener('click', () => {
   
 
 });
-
-
