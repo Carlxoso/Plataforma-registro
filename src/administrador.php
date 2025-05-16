@@ -189,6 +189,7 @@ $resultado = $conn->query($consulta);
                     </th>
                 </tr>
 
+                <?php $ngrok_url = "https://448a-157-100-140-76.ngrok-free.app"; ?>
                 <?php while ($row = $resultado->fetch_assoc()) { ?>
                     <tr>
                         <form method="POST">
@@ -200,7 +201,8 @@ $resultado = $conn->query($consulta);
                             <td><?= htmlspecialchars($row['producto']) ?></td>
 
                             <td style="min-width: 120px;">
-                                <button class="btn-qr" onclick="mostrarQR(event, 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?= urlencode($row['nombre']); ?>')" style="padding: 5px 10px; font-size: 13px;">Ver QR</button>
+                                <button class="btn-qr" onclick="mostrarQR(event, '<?= $ngrok_url ?>/descargar_pdf.php?id=<?= $row['id'] ?>')" style="padding: 5px 10px; font-size: 13px;">Ver QR</button>
+
                             </td>
 
                             <td style="min-width: 120px;">
