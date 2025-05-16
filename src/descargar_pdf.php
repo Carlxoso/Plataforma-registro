@@ -21,50 +21,25 @@ $vendedor = $result->fetch_assoc();
 $stmt->close();
 
 class PDF extends FPDF {
-    // Función para dibujar un rectángulo con esquinas redondeadas
     function RoundedRect($x, $y, $w, $h, $r, $style = '') {
         $k = $this->k;
         $hp = $this->h;
-        if($style=='F')
-            $op='f';
-        elseif($style=='FD' || $style=='DF')
-            $op='B';
-        else
-            $op='S';
+        $op = ($style == 'F') ? 'f' : (($style == 'FD' || $style == 'DF') ? 'B' : 'S');
+        $MyArc = 4 / 3 * (sqrt(2) - 1);
 
-        $MyArc = 4/3 * (sqrt(2) - 1);
-
-        $this->_out(sprintf('%.2f %.2f m', ($x+$r)*$k, ($hp-$y)*$k ));
-
-        $xc = $x+$w-$r;
-        $yc = $y+$r;
-        $this->_Arc($xc, $yc, $r, 180, 270);
-
-        $xc = $x+$w-$r;
-        $yc = $y+$h-$r;
-        $this->_Arc($xc, $yc, $r, 270, 360);
-
-        $xc = $x+$r;
-        $yc = $y+$h-$r;
-        $this->_Arc($xc, $yc, $r, 0, 90);
-
-        $xc = $x+$r;
-        $yc = $y+$r;
-        $this->_Arc($xc, $yc, $r, 90, 180);
-
+        $this->_out(sprintf('%.2f %.2f m', ($x + $r) * $k, ($hp - $y) * $k));
+        $this->_Arc($x + $w - $r, $y + $r, $r, 180, 270);
+        $this->_Arc($x + $w - $r, $y + $h - $r, $r, 270, 360);
+        $this->_Arc($x + $r, $y + $h - $r, $r, 0, 90);
+        $this->_Arc($x + $r, $y + $r, $r, 90, 180);
         $this->_out($op);
     }
 
     function _Arc($x, $y, $r, $sAngle, $eAngle) {
         $k = $this->k;
         $hp = $this->h;
-
-        $sAngle /= 360;
-        $eAngle /= 360;
-
-        $sAngle *= 2 * M_PI;
-        $eAngle *= 2 * M_PI;
-
+        $sAngle *= M_PI / 180;
+        $eAngle *= M_PI / 180;
         $cx = $x * $k;
         $cy = ($hp - $y) * $k;
 
@@ -78,77 +53,73 @@ class PDF extends FPDF {
     }
 }
 
-$pdf = new PDF('P', 'mm', [85, 54]);
+$pdf = new PDF('P', 'mm', [85, 55]); // Alto = 85 mm, Ancho = 55 mm
 $pdf->AddPage();
 
-// Margen fijo para todo el contenido
-$margin = 5;
-$width = 85;
-$height = 54;
+// Márgenes
+$margin = 3;
+$width = 55;
+$height = 85;
+$usableWidth = $width - 2 * $margin;
 
-// Dibuja el marco redondeado completo (marco visible)
+// Fondo
 $pdf->SetFillColor(236, 240, 241);
-$pdf->RoundedRect($margin, $margin, $width - 2*$margin, $height - 2*$margin, 4, 'F');
+$pdf->RoundedRect($margin, $margin, $usableWidth, $height - 2 * $margin, 3, 'F');
 
-// Logo universidad
-$logoPath = 'assets/img/escudoutlvte.png';
-$logoSize = 18;
+// Logo
+$logoPath = 'assets/img/logo_universidad.png';
 if (file_exists($logoPath)) {
-    // Coloca logo dentro del margen, arriba a la izquierda
-    $pdf->Image($logoPath, $margin + 2, $margin + 2, $logoSize, $logoSize);
+    $pdf->Image($logoPath, $margin + 1, $margin + 1, 14, 14);
 }
 
-// Título universidad centrado arriba
-$pdf->SetFont('Arial', 'B', 12);
+// Universidad (centrado)
+$pdf->SetFont('Arial', 'B', 9);
 $pdf->SetTextColor(52, 73, 94);
+$pdf->SetXY($margin, $margin + 3);
+$pdf->Cell($usableWidth, 5, utf8_decode('Universidad Técnica Luis Vargas Torres'), 0, 1, 'C');
 
-// Coordenada X para centrar texto dentro del marco (sin contar el margen)
-$pdf->SetXY($margin, $margin + 4);
-$pdf->Cell($width - 2*$margin, 10, utf8_decode('Universidad Técnica Luis Vargas Torres'), 0, 1, 'C');
-
-// Foto vendedor a la derecha, tamaño 22x28mm, dentro del margen
-$fotoWidth = 22;
-$fotoHeight = 28;
-$fotoX = $width - $margin - $fotoWidth;
+// Foto
+$fotoW = 20;
+$fotoH = 26;
+$fotoX = $width - $margin - $fotoW;
 $fotoY = $margin + 20;
+$fotoPath = isset($vendedor['foto']) ? 'assets/img/vendedores/' . $vendedor['foto'] : '';
 
-$fotoPath = '';
-if (isset($vendedor['foto']) && !empty($vendedor['foto'])) {
-    $fotoPath = 'assets/img/vendedores/' . $vendedor['foto'];
-}
-
-if ($fotoPath != '' && file_exists($fotoPath)) {
-    $pdf->Image($fotoPath, $fotoX, $fotoY, $fotoWidth, $fotoHeight);
+if ($fotoPath && file_exists($fotoPath)) {
+    $pdf->Image($fotoPath, $fotoX, $fotoY, $fotoW, $fotoH);
 } else {
-    // Marco vacío con texto "Sin Foto"
-    $pdf->Rect($fotoX, $fotoY, $fotoWidth, $fotoHeight);
-    $pdf->SetFont('Arial', 'I', 8);
+    $pdf->Rect($fotoX, $fotoY, $fotoW, $fotoH);
+    $pdf->SetFont('Arial', 'I', 7);
     $pdf->SetTextColor(150);
-    $pdf->SetXY($fotoX, $fotoY + $fotoHeight / 2 - 4);
-    $pdf->Cell($fotoWidth, 8, 'Sin Foto', 0, 0, 'C');
-    $pdf->SetTextColor(0);
+    $pdf->SetXY($fotoX, $fotoY + $fotoH / 2 - 3);
+    $pdf->Cell($fotoW, 6, 'Sin Foto', 0, 0, 'C');
 }
 
-// Datos vendedor a la izquierda, espacio disponible a la izquierda de la foto
-$datosX = $margin + 3;
+// Datos del vendedor (alineados a la izquierda)
+$datosX = $margin + 1;
 $datosY = $fotoY;
-$datosWidth = $fotoX - $datosX - 3;
+$datosW = $fotoX - $datosX - 2;
 
 $pdf->SetXY($datosX, $datosY);
+$pdf->SetFont('Arial', 'B', 10);
 $pdf->SetTextColor(0);
-$pdf->SetFont('Arial', 'B', 13);
-$pdf->Cell($datosWidth, 7, utf8_decode($vendedor['nombre']), 0, 1);
+$pdf->MultiCell($datosW, 5, utf8_decode($vendedor['nombre']), 0, 'L');
 
-$pdf->SetFont('Arial', '', 10);
-$pdf->Cell($datosWidth, 6, 'Dia: ' . utf8_decode($vendedor['dia']), 0, 1);
-$pdf->Cell($datosWidth, 6, 'Entrada: ' . $vendedor['entrada'], 0, 1);
-$pdf->Cell($datosWidth, 6, 'Salida: ' . $vendedor['salida'], 0, 1);
-$pdf->Cell($datosWidth, 6, 'Producto: ' . utf8_decode($vendedor['producto']), 0, 1);
+$pdf->SetFont('Arial', '', 8);
+$pdf->SetX($datosX);
+$pdf->Cell($datosW, 4, 'Día: ' . utf8_decode($vendedor['dia']), 0, 1, 'L');
+$pdf->SetX($datosX);
+$pdf->Cell($datosW, 4, 'Entrada: ' . $vendedor['entrada'], 0, 1, 'L');
+$pdf->SetX($datosX);
+$pdf->Cell($datosW, 4, 'Salida: ' . $vendedor['salida'], 0, 1, 'L');
+$pdf->SetX($datosX);
+$pdf->Cell($datosW, 4, 'Producto: ' . utf8_decode($vendedor['producto']), 0, 1, 'L');
 
-// Pie de página centrado abajo, dentro del margen
+// Pie
 $pdf->SetFont('Arial', 'I', 7);
 $pdf->SetTextColor(120);
-$pdf->SetXY($margin, $height - $margin - 6);
-$pdf->Cell($width - 2*$margin, 5, 'Carnet válido sólo con sello oficial', 0, 0, 'C');
+$pdf->SetXY($margin, $height - $margin - 5);
+$pdf->Cell($usableWidth, 4, 'Carnet válido sólo con sello oficial', 0, 0, 'C');
 
+// Mostrar PDF en el navegador (sin descarga)
 $pdf->Output('I', 'Carnet_' . $vendedor['nombre'] . '.pdf');
