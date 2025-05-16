@@ -189,7 +189,7 @@ $resultado = $conn->query($consulta);
                     </th>
                 </tr>
 
-                <?php $ngrok_url = "https://448a-157-100-140-76.ngrok-free.app"; ?>
+                <?php $ngrok_url = "https://f4db-157-100-140-76.ngrok-free.app"; ?>
                 <?php while ($row = $resultado->fetch_assoc()) { ?>
                     <tr>
                         <form method="POST">
