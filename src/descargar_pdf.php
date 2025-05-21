@@ -21,11 +21,11 @@ $vendedor = $result->fetch_assoc();
 $stmt->close();
 
 class PDF extends FPDF {
+    // Dibujar rectángulo con bordes redondeados
     function RoundedRect($x, $y, $w, $h, $r, $style = '') {
         $k = $this->k;
         $hp = $this->h;
         $op = ($style == 'F') ? 'f' : (($style == 'FD' || $style == 'DF') ? 'B' : 'S');
-        $MyArc = 4 / 3 * (sqrt(2) - 1);
 
         $this->_out(sprintf('%.2f %.2f m', ($x + $r) * $k, ($hp - $y) * $k));
         $this->_Arc($x + $w - $r, $y + $r, $r, 180, 270);
@@ -53,73 +53,52 @@ class PDF extends FPDF {
     }
 }
 
-$pdf = new PDF('P', 'mm', [85, 55]); // Alto = 85 mm, Ancho = 55 mm
+// Dimensiones tarjeta (ancho x alto)
+$pdfWidth = 85;  // mm
+$pdfHeight = 54; // mm
+
+$pdf = new PDF('P', 'mm', [$pdfHeight, $pdfWidth]); // altura, ancho
 $pdf->AddPage();
 
-// Márgenes
-$margin = 3;
-$width = 55;
-$height = 85;
-$usableWidth = $width - 2 * $margin;
+$margin = 5; // margen
 
-// Fondo
+// Fondo con bordes redondeados
 $pdf->SetFillColor(236, 240, 241);
-$pdf->RoundedRect($margin, $margin, $usableWidth, $height - 2 * $margin, 3, 'F');
+$pdf->RoundedRect($margin, $margin, $pdfWidth - 2 * $margin, $pdfHeight - 2 * $margin, 4, 'F');
 
 // Logo
 $logoPath = 'assets/img/logo_universidad.png';
 if (file_exists($logoPath)) {
-    $pdf->Image($logoPath, $margin + 1, $margin + 1, 14, 14);
+    $pdf->Image($logoPath, $margin + 2, $margin + 2, 18, 18);
 }
 
-// Universidad (centrado)
-$pdf->SetFont('Arial', 'B', 9);
-$pdf->SetTextColor(52, 73, 94);
-$pdf->SetXY($margin, $margin + 3);
-$pdf->Cell($usableWidth, 5, utf8_decode('Universidad Técnica Luis Vargas Torres'), 0, 1, 'C');
-
-// Foto
-$fotoW = 20;
-$fotoH = 26;
-$fotoX = $width - $margin - $fotoW;
-$fotoY = $margin + 20;
-$fotoPath = isset($vendedor['foto']) ? 'assets/img/vendedores/' . $vendedor['foto'] : '';
-
-if ($fotoPath && file_exists($fotoPath)) {
-    $pdf->Image($fotoPath, $fotoX, $fotoY, $fotoW, $fotoH);
-} else {
-    $pdf->Rect($fotoX, $fotoY, $fotoW, $fotoH);
-    $pdf->SetFont('Arial', 'I', 7);
-    $pdf->SetTextColor(150);
-    $pdf->SetXY($fotoX, $fotoY + $fotoH / 2 - 3);
-    $pdf->Cell($fotoW, 6, 'Sin Foto', 0, 0, 'C');
-}
-
-// Datos del vendedor (alineados a la izquierda)
-$datosX = $margin + 1;
-$datosY = $fotoY;
-$datosW = $fotoX - $datosX - 2;
-
-$pdf->SetXY($datosX, $datosY);
+// Texto universidad (centrado, dejando espacio al logo)
 $pdf->SetFont('Arial', 'B', 10);
+$pdf->SetTextColor(52, 73, 94);
+$pdf->SetXY($margin + 22, $margin + 6);
+$pdf->Cell($pdfWidth - 2 * $margin - 22, 8, utf8_decode('Universidad Técnica Luis Vargas Torres'), 0, 1, 'C');
+
+// Nombre vendedor (centrado, más grande)
+$pdf->SetFont('Arial', 'B', 14);
 $pdf->SetTextColor(0);
-$pdf->MultiCell($datosW, 5, utf8_decode($vendedor['nombre']), 0, 'L');
+$pdf->SetXY($margin, $margin + 26);
+$pdf->Cell($pdfWidth - 2 * $margin, 10, utf8_decode($vendedor['nombre']), 0, 1, 'C');
 
-$pdf->SetFont('Arial', '', 8);
-$pdf->SetX($datosX);
-$pdf->Cell($datosW, 4, 'Día: ' . utf8_decode($vendedor['dia']), 0, 1, 'L');
-$pdf->SetX($datosX);
-$pdf->Cell($datosW, 4, 'Entrada: ' . $vendedor['entrada'], 0, 1, 'L');
-$pdf->SetX($datosX);
-$pdf->Cell($datosW, 4, 'Salida: ' . $vendedor['salida'], 0, 1, 'L');
-$pdf->SetX($datosX);
-$pdf->Cell($datosW, 4, 'Producto: ' . utf8_decode($vendedor['producto']), 0, 1, 'L');
+// Datos (centrados y con espacio entre ellos)
+$pdf->SetFont('Arial', '', 11);
+$pdf->SetXY($margin, $margin + 38);
+$pdf->Cell($pdfWidth - 2 * $margin, 7, 'Día: ' . utf8_decode($vendedor['dia']), 0, 1, 'C');
+$pdf->SetX($margin);
+$pdf->Cell($pdfWidth - 2 * $margin, 7, 'Entrada: ' . $vendedor['entrada'], 0, 1, 'C');
+$pdf->SetX($margin);
+$pdf->Cell($pdfWidth - 2 * $margin, 7, 'Salida: ' . $vendedor['salida'], 0, 1, 'C');
+$pdf->SetX($margin);
+$pdf->Cell($pdfWidth - 2 * $margin, 7, 'Producto: ' . utf8_decode($vendedor['producto']), 0, 1, 'C');
 
-// Pie
-$pdf->SetFont('Arial', 'I', 7);
+// Pie pequeño centrado
+$pdf->SetFont('Arial', 'I', 8);
 $pdf->SetTextColor(120);
-$pdf->SetXY($margin, $height - $margin - 5);
-$pdf->Cell($usableWidth, 4, 'Carnet válido sólo con sello oficial', 0, 0, 'C');
+$pdf->SetXY($margin, $pdfHeight - $margin - 8);
+$pdf->Cell($pdfWidth - 2 * $margin, 6, 'Carnet válido sólo con sello oficial', 0, 0, 'C');
 
-// Mostrar PDF en el navegador (sin descarga)
 $pdf->Output('I', 'Carnet_' . $vendedor['nombre'] . '.pdf');

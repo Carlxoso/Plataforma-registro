@@ -189,7 +189,7 @@ $resultado = $conn->query($consulta);
                     </th>
                 </tr>
 
-                <?php $ngrok_url = "https://a22e-157-100-140-76.ngrok-free.app/src/descargar_pdf.php?id=123"; ?>
+                <?php $ngrok_url = "https://forcibly-legible-piglet.ngrok-free.app/Plataforma-registro/src/descargar_pdf.php?id=7"; ?>
                 <?php while ($row = $resultado->fetch_assoc()) { ?>
                     <tr>
                         <form method="POST">
