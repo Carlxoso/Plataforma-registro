@@ -1,5 +1,26 @@
 <?php
 session_start();
+
+// Tiempo máximo de inactividad en segundos (ejemplo: 15 minutos)
+$tiempoMaxInactividad = 15 * 60; 
+
+// Verificar si 'last_activity' existe en la sesión
+if (isset($_SESSION['last_activity'])) {
+    // Calcular el tiempo de inactividad
+    $tiempoInactividad = time() - $_SESSION['last_activity'];
+
+    if ($tiempoInactividad > $tiempoMaxInactividad) {
+        // Tiempo de inactividad excedido: cerrar sesión
+        session_unset();
+        session_destroy();
+        header("Location: login.php?mensaje=sesion_expirada");
+        exit();
+    }
+}
+
+// Actualizar el tiempo de la última actividad
+$_SESSION['last_activity'] = time();
+
 include 'conexion.php';
 
 // Verificar si el usuario es administrador

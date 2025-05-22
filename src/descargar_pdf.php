@@ -1,100 +1,206 @@
 <?php
 require('fpdf/fpdf.php');
-include 'conexion.php';
 
-if (!isset($_GET['id'])) {
-    die("ID no proporcionado.");
+header('Content-Type: application/pdf');
+header('Content-Disposition: attachment; filename="carnet.pdf"');
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+
+// Datos conexión MySQL
+$host = "localhost";
+$usuario = "root";
+$contrasena = "";
+$baseDeDatos = "vendetors";
+
+// Conexión
+$conn = new mysqli($host, $usuario, $contrasena, $baseDeDatos);
+if ($conn->connect_error) {
+    die("Error de conexión: " . $conn->connect_error);
 }
 
-$id = intval($_GET['id']);
+$id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+if ($id <= 0) {
+    die("ID inválido.");
+}
 
-$stmt = $conn->prepare("SELECT * FROM vendedores WHERE id = ?");
-$stmt->bind_param("i", $id);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows === 0) {
-    die("Vendedor no encontrado.");
+// Consulta a la base de datos sin rol
+$sql = "SELECT nombre, cedula, zona FROM vendedores WHERE id = $id LIMIT 1";
+$result = $conn->query($sql);
+if (!$result || $result->num_rows == 0) {
+    die("No se encontró el vendedor con ID = $id");
 }
 
 $vendedor = $result->fetch_assoc();
-$stmt->close();
 
-class PDF extends FPDF {
-    function RoundedRect($x, $y, $w, $h, $r, $style = '') {
-        $k = $this->k;
-        $hp = $this->h;
-        $op = ($style == 'F') ? 'f' : (($style == 'FD' || $style == 'DF') ? 'B' : 'S');
+// Dimensiones carnet tipo ID (vertical)
+$pdfWidth = 65;  // mm
+$pdfHeight = 97; // mm
 
-        $this->_out(sprintf('%.2f %.2f m', ($x + $r) * $k, ($hp - $y) * $k));
-        $this->_Arc($x + $w - $r, $y + $r, $r, 180, 270);
-        $this->_Arc($x + $w - $r, $y + $h - $r, $r, 270, 360);
-        $this->_Arc($x + $r, $y + $h - $r, $r, 0, 90);
-        $this->_Arc($x + $r, $y + $r, $r, 90, 180);
-        $this->_out($op);
-    }
-
-    function _Arc($x, $y, $r, $sAngle, $eAngle) {
-        $k = $this->k;
-        $hp = $this->h;
-        $sAngle *= M_PI / 180;
-        $eAngle *= M_PI / 180;
-        $cx = $x * $k;
-        $cy = ($hp - $y) * $k;
-
-        $this->_out(sprintf('%.2f %.2f m', $cx + $r * $k * cos($sAngle), $cy - $r * $k * sin($sAngle)));
-
-        $steps = 8;
-        for ($i = 1; $i <= $steps; $i++) {
-            $angle = $sAngle + ($eAngle - $sAngle) * $i / $steps;
-            $this->_out(sprintf('%.2f %.2f l', $cx + $r * $k * cos($angle), $cy - $r * $k * sin($angle)));
-        }
-    }
-}
-
-// Dimensiones carnet tipo ID (horizontal)
-$pdfWidth = 85;
-$pdfHeight = 54;
-$margin = 4;
-$usableWidth = $pdfWidth - 2 * $margin;
-
-$pdf = new PDF('L', 'mm', [$pdfHeight, $pdfWidth]); // Horizontal
-
-// ---------------- Página 1: Frontal del Carnet ----------------
+$pdf = new FPDF('P', 'mm', [$pdfWidth, $pdfHeight]);
 $pdf->AddPage();
-$pdf->SetFillColor(255, 255, 255);
-$pdf->RoundedRect($margin, $margin, $usableWidth, $pdfHeight - 2 * $margin, 3, 'F');
 
-// Logo
+// ---------------- Logo superior ----------------
 $logoPath = 'assets/img/utlvtecarnet.png';
 if (file_exists($logoPath)) {
-    $pdf->Image($logoPath, $pdfWidth / 2 - 7, $margin + 2, 14);
+    $logoWidth = 53;
+    $logoY = 5;
+    $pdf->Image($logoPath, ($pdfWidth - $logoWidth) / 2, $logoY, $logoWidth);
 }
 
-// Foto del vendedor
-$fotoPath = isset($vendedor['foto']) ? 'assets/img/vendedores/' . $vendedor['foto'] : '';
-if ($fotoPath && file_exists($fotoPath)) {
-    $pdf->Image($fotoPath, $pdfWidth / 2 - 10, $margin + 18, 20, 24);
+// ---------------- Foto con marco ----------------
+$fotoPath = 'assets/img/carnetlogo.png';
+$fotoW = 22;
+$fotoH = 26;
+$espacioEntreLogoYFoto = -31;
+$fotoY = $logoY + $logoWidth + $espacioEntreLogoYFoto;
+$fotoX = ($pdfWidth - $fotoW) / 2;
+
+if (file_exists($fotoPath)) {
+    $pdf->SetDrawColor(0, 0, 0);
+    $pdf->SetLineWidth(0.9);
+    $pdf->Rect($fotoX, $fotoY, $fotoW, $fotoH);
+    $pdf->SetLineWidth(0.2);
+    $pdf->Image($fotoPath, $fotoX, $fotoY, $fotoW, $fotoH);
 }
 
-// Nombre y Cédula
+// ---------------- Datos del vendedor ----------------
+$espacioEntreFotoYTexto = 5;
+
+// Nombre
+$pdf->SetFont('Arial', 'B', 11);
+$pdf->SetTextColor(0, 0, 0);
+$pdf->SetXY(0, $fotoY + $fotoH + $espacioEntreFotoYTexto);
+$pdf->Cell($pdfWidth, 6, utf8_decode($vendedor['nombre']), 0, 1, 'C');
+
+// Cédula
+$pdf->SetFont('Arial', '', 10);
+$pdf->SetX(0);
+$pdf->Cell($pdfWidth, 5, utf8_decode("CI: " . $vendedor['cedula']), 0, 1, 'C');
+
+// Texto fijo "Vendedor"
 $pdf->SetFont('Arial', 'B', 10);
-$pdf->SetTextColor(0);
-$pdf->SetXY($margin, $margin + 45);
-$pdf->Cell($usableWidth, 5, utf8_decode($vendedor['nombre']), 0, 1, 'C');
+$pdf->SetX(0);
+$pdf->Cell($pdfWidth, 6, utf8_decode("Vendedor"), 0, 1, 'C');
 
+// ---------------- Posición zona asignada ----------------
+$posYZonaAsignada = 80;
+$pdf->SetY($posYZonaAsignada);
+
+// Mostrar "Zona asignada:" en negrita y centrado
+$textoNegrita = utf8_decode("Zona asignada:");
+$pdf->SetFont('Arial', 'B', 9);
+$xPos = ($pdfWidth - $pdf->GetStringWidth($textoNegrita)) / 2;
+$pdf->SetXY($xPos, $pdf->GetY());
+$pdf->Cell($pdf->GetStringWidth($textoNegrita), 5, $textoNegrita, 0, 1, 'C');
+
+// Texto normal de la zona asignada (puede ser largo)
+// Lo dividimos en líneas centradas que no sobrepasen el ancho máximo
+$textoZona = utf8_decode($vendedor['zona']);
 $pdf->SetFont('Arial', '', 9);
-$pdf->Cell($usableWidth, 5, 'Cédula: ' . utf8_decode($vendedor['cedula']), 0, 1, 'C');
-$pdf->Cell($usableWidth, 5, 'Rol: Vendedor', 0, 1, 'C');
 
-// ---------------- Página 2: Reverso del Carnet ----------------
-$pdf->AddPage();
+$maxWidth = $pdfWidth - 10; // deja margen de 5mm a cada lado
+$words = explode(' ', $textoZona);
+$line = '';
+$yCurrent = $pdf->GetY();
+
+foreach ($words as $word) {
+    $testLine = $line ? $line . ' ' . $word : $word;
+    if ($pdf->GetStringWidth($testLine) > $maxWidth) {
+        // imprimir línea centrada
+        $lineWidth = $pdf->GetStringWidth($line);
+        $xPos = ($pdfWidth - $lineWidth) / 2;
+        $pdf->SetXY($xPos, $yCurrent);
+        $pdf->Cell($lineWidth, 5, $line, 0, 1, 'C');
+        $line = $word;
+        $yCurrent += 5;
+    } else {
+        $line = $testLine;
+    }
+}
+// Imprime la última línea
+if ($line) {
+    $lineWidth = $pdf->GetStringWidth($line);
+    $xPos = ($pdfWidth - $lineWidth) / 2;
+    $pdf->SetXY($xPos, $yCurrent);
+    $pdf->Cell($lineWidth, 5, $line, 0, 1, 'C');
+    $pdf->Ln(4);
+}
+
+
+// ---------------- Mensaje pérdida ----------------
+$textoNegrita = utf8_decode("En caso de pérdida,");
+$pdf->SetFont('Arial', 'B', 9);
+$xPos = ($pdfWidth - $pdf->GetStringWidth($textoNegrita)) / 2;
+$pdf->SetXY($xPos, $pdf->GetY());
+$pdf->Cell($pdf->GetStringWidth($textoNegrita), 5, $textoNegrita, 0, 1, 'C');
+
+$textoNormal = utf8_decode("el portador debe tramitar un nuevo carnet en las oficinas correspondientes para continuar con su autorización de venta.");
 $pdf->SetFont('Arial', '', 9);
-$pdf->SetTextColor(40);
-$pdf->SetXY($margin, $margin + 5);
-$texto = "Este carnet es válido únicamente dentro de las instalaciones de la Universidad Técnica Luis Vargas Torres.\n\n" .
-         "Zona autorizada para comercializar productos: " . utf8_decode($vendedor['zona']) . ".\n\n" .
-         "En caso de pérdida, el portador deberá tramitar un nuevo carnet ante las autoridades correspondientes.";
-$pdf->MultiCell($usableWidth, 6, utf8_decode($texto), 0, 'J');
 
-$pdf->Output('I', 'Carnet_' . $vendedor['nombre'] . '.pdf');
+$maxWidth = $pdfWidth - 10;
+$words = explode(' ', $textoNormal);
+$line = '';
+$yCurrent = $pdf->GetY();
+
+foreach ($words as $word) {
+    $testLine = $line ? $line . ' ' . $word : $word;
+    if ($pdf->GetStringWidth($testLine) > $maxWidth) {
+        $lineWidth = $pdf->GetStringWidth($line);
+        $xPos = ($pdfWidth - $lineWidth) / 2;
+        $pdf->SetXY($xPos, $yCurrent);
+        $pdf->Cell($lineWidth, 5, $line, 0, 1, 'C');
+        $line = $word;
+        $yCurrent += 5;
+    } else {
+        $line = $testLine;
+    }
+}
+if ($line) {
+    $lineWidth = $pdf->GetStringWidth($line);
+    $xPos = ($pdfWidth - $lineWidth) / 2;
+    $pdf->SetXY($xPos, $yCurrent);
+    $pdf->Cell($lineWidth, 5, $line, 0, 1, 'C');
+}
+
+// ---------------- Aviso restricción ----------------
+$avisoRestriccion = utf8_decode("Este carnet es válido únicamente dentro de las instalaciones autorizadas.");
+
+$pdf->SetY($pdf->GetY() + 7);
+$pdf->SetFont('Arial', 'B', 9);
+
+$maxWidth = $pdfWidth - 10;
+$words = explode(' ', $avisoRestriccion);
+$line = '';
+$yCurrent = $pdf->GetY();
+
+foreach ($words as $word) {
+    $testLine = $line ? $line . ' ' . $word : $word;
+    if ($pdf->GetStringWidth($testLine) > $maxWidth) {
+        $lineWidth = $pdf->GetStringWidth($line);
+        $xPos = ($pdfWidth - $lineWidth) / 2;
+        $pdf->SetXY($xPos, $yCurrent);
+        $pdf->Cell($lineWidth, 5, $line, 0, 1, 'C');
+        $line = $word;
+        $yCurrent += 5;
+    } else {
+        $line = $testLine;
+    }
+}
+if ($line) {
+    $lineWidth = $pdf->GetStringWidth($line);
+    $xPos = ($pdfWidth - $lineWidth) / 2;
+    $pdf->SetXY($xPos, $yCurrent);
+    $pdf->Cell($lineWidth, 5, $line, 0, 1, 'C');
+}
+
+// ---------------- Franja verde inferior ----------------
+$pdf->SetFillColor(0, 128, 0);
+$franjaAltura = 6;
+$franjaY = $pdfHeight - $franjaAltura;
+$pdf->Rect(0, $franjaY, $pdfWidth, $franjaAltura, 'F');
+
+
+
+$pdf->Output();
+?>
