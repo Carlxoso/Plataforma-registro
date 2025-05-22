@@ -8,48 +8,61 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-
 // Agregar vendedor
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['agregar'])) {
     $nombre = $_POST['nombre'];
+    $cedula = $_POST['cedula'];
     $dia = $_POST['dia'];
     $entrada = $_POST['entrada'];
     $salida = $_POST['salida'];
     $producto = $_POST['producto'];
+    $zona = $_POST['zona'];
 
-    // Verificar si el nombre ya existe
-    $stmt = $conn->prepare("SELECT id FROM vendedores WHERE nombre = ?");
-    $stmt->bind_param("s", $nombre);
+    // Validar cédula: debe tener exactamente 10 dígitos numéricos
+    if (!preg_match('/^\d{10}$/', $cedula)) {
+        echo "<script>alert('La cédula debe contener exactamente 10 dígitos numéricos'); window.history.back();</script>";
+        exit;
+    }
+
+    // Verificar si la cédula ya existe
+    $stmt = $conn->prepare("SELECT cedula FROM vendedores WHERE cedula = ?");
+    $stmt->bind_param("s", $cedula);
     $stmt->execute();
     $stmt->store_result();
 
     if ($stmt->num_rows > 0) {
-        // Ya existe un vendedor con ese nombre
         $stmt->close();
-        echo "<script>alert('Error: Ya existe un vendedor con ese nombre'); window.location.href='administrador.php?agregar_registro=true';</script>";
+        echo "<script>alert('Error: Ya existe un vendedor con esa cédula'); window.location.href='administrador.php?agregar_registro=true';</script>";
     } else {
         $stmt->close();
         // Insertar nuevo registro
-        $stmt = $conn->prepare("INSERT INTO vendedores (nombre, dia, entrada, salida, producto) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param("sssss", $nombre, $dia, $entrada, $salida, $producto);
+        $stmt = $conn->prepare("INSERT INTO vendedores (nombre, cedula, dia, entrada, salida, producto, zona) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssssss", $nombre, $cedula, $dia, $entrada, $salida, $producto, $zona);
         $stmt->execute();
         $stmt->close();
         echo "<script>alert('Vendedor agregado correctamente'); window.location.href='administrador.php';</script>";
     }
 }
 
-
 // Editar vendedor
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['editar'])) {
-    $id = $_POST['id'];
+    $cedula = $_POST['cedula'];
     $nombre = $_POST['nombre'];
     $dia = $_POST['dia'];
     $entrada = $_POST['entrada'];
     $salida = $_POST['salida'];
     $producto = $_POST['producto'];
+    $zona = $_POST['zona'];
 
-    $stmt = $conn->prepare("UPDATE vendedores SET nombre=?, dia=?, entrada=?, salida=?, producto=? WHERE id=?");
-    $stmt->bind_param("sssssi", $nombre, $dia, $entrada, $salida, $producto, $id);
+    // Validar cédula nuevamente
+    if (!preg_match('/^\d{10}$/', $cedula)) {
+        echo "<script>alert('La cédula debe contener exactamente 10 dígitos numéricos'); window.history.back();</script>";
+        exit;
+    }
+
+    // Actualizar registro
+    $stmt = $conn->prepare("UPDATE vendedores SET nombre = ?, dia = ?, entrada = ?, salida = ?, producto = ?, zona = ? WHERE cedula = ?");
+    $stmt->bind_param("sssssss", $nombre, $dia, $entrada, $salida, $producto, $zona, $cedula);
     $stmt->execute();
     $stmt->close();
     echo "<script>alert('Vendedor actualizado correctamente'); window.location.href='administrador.php';</script>";
@@ -57,9 +70,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['editar'])) {
 
 // Borrar vendedor
 if (isset($_GET['borrar'])) {
-    $id = $_GET['borrar'];
-    $stmt = $conn->prepare("DELETE FROM vendedores WHERE id = ?");
-    $stmt->bind_param("i", $id);
+    $cedula = $_GET['borrar'];
+    $stmt = $conn->prepare("DELETE FROM vendedores WHERE cedula = ?");
+    $stmt->bind_param("s", $cedula);
     $stmt->execute();
     $stmt->close();
     echo "<script>alert('Vendedor eliminado correctamente'); window.location.href='administrador.php';</script>";
@@ -83,6 +96,8 @@ switch ($orden) {
 }
 $resultado = $conn->query($consulta);
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="es">
@@ -135,6 +150,12 @@ $resultado = $conn->query($consulta);
                 <input type="text" name="nombre" id="nombre" placeholder="Nombre" required>
             </div>
             <div class="field-wrapper">
+            <label for="cedula">Cédula:</label>
+            <input type="text" name="cedula" id="cedula" placeholder="Cédula" maxlength="10" pattern="\d{10}" requiredoninput="this.value = this.value.replace(/\D/g, '')"title="La cédula debe contener exactamente 10 dígitos numéricos">
+           </div>
+
+
+            <div class="field-wrapper">
                 <label for="dia">Día:</label>
                 <input type="text" name="dia" id="dia" placeholder="Día" required>
             </div>
@@ -150,74 +171,84 @@ $resultado = $conn->query($consulta);
                 <label for="producto">Producto:</label>
                 <input type="text" name="producto" id="producto" placeholder="Producto" required>
             </div>
+            <div class="field-wrapper">
+    <label for="zona">Zona:</label>
+    <select name="zona" id="zona" required>
+        <option value="">Seleccione una zona</option>
+        <option value="Facultad de Ingenierías">Facultad de Ingenierías</option>
+        <option value="Facultad de Ciencias Sociales y de Servicios">Facultad de Ciencias Sociales y de Servicios</option>
+        <option value="Facultad de Ciencias Administrativas y Económicas">Facultad de Ciencias Administrativas y Económicas</option>
+        <option value="Facultad de Pedagogía">Facultad de Pedagogía</option>
+    </select>
+</div>
+
         </div>
         <button type="submit" name="agregar" class="btn-agregar">Agregar</button>
     </div>
 </form>
 
 
+
         <?php } else { ?>
 
             <!-- Tabla de registros -->
-            <table style="width: 100%; border-collapse: collapse;">
+<table style="width: 100%; border-collapse: collapse;">
+    <tr style="background-color: #3498db; color: white;">
+        <th>Nombre</th>
+        <th>Cédula</th>
+        <th>Día</th>
+        <th>Entrada</th>
+        <th>Salida</th>
+        <th>Producto</th>
+        <th>Zona</th>
+        <th>QR</th>
+        <th>Eliminar</th>
+        <th>Editar</th>
+        
+    </tr>
 
-                <tr style="background-color: #3498db; color: white;">
-                    <th>Nombre</th>
-                    <th>Día</th>
-                    <th>Entrada</th>
-                    <th>Salida</th>
-                    <th>Producto</th>
-                    <th>QR</th>
-                    <th>Eliminar</th>
-                    <th>Editar</th>
-                    <th>
-                        <div style="display: flex; align-items: center; justify-content: center;">
-                            
-                            <div style="position: relative; margin-left: 8px;">
-                                <button type="button" onclick="toggleFiltro()" style="background: white; border: 1px solid #ccc; padding: 6px 10px; border-radius: 6px; cursor: pointer;">
-                                    <i class="fas fa-filter" style="color: #333;"></i>
-                                </button>
-                                <div id="filtro-menu" style="display: none; position: absolute; top: 42px; right: 0; background: white; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); z-index: 999;">
-                                    <form method="GET" style="margin: 0; padding: 8px;">
-                                        <button type="submit" name="orden" value="nombre" style="display: block; background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer;">Nombre (A-Z)</button>
-                                        <button type="submit" name="orden" value="entrada" style="display: block; background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer;">Entrada</button>
-                                        <button type="submit" name="orden" value="salida" style="display: block; background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer;">Salida</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </th>
-                </tr>
+    
+    <?php while ($row = $resultado->fetch_assoc()) { ?>
+        <tr>
+            <form method="POST">
+                <input type="hidden" name="id" value="<?= $row['id'] ?>">
+                <td><?= htmlspecialchars($row['nombre']) ?></td>
+                <td><?= htmlspecialchars($row['cedula']) ?></td>
+                <td><?= htmlspecialchars($row['dia']) ?></td>
+                <td><?= htmlspecialchars($row['entrada']) ?></td>
+                <td><?= htmlspecialchars($row['salida']) ?></td>
+                <td><?= htmlspecialchars($row['producto']) ?></td>
+                <td><?= htmlspecialchars($row['zona']) ?></td>
 
-                <?php $ngrok_url = "https://forcibly-legible-piglet.ngrok-free.app/Plataforma-registro/src/descargar_pdf.php?id=7"; ?>
-                <?php while ($row = $resultado->fetch_assoc()) { ?>
-                    <tr>
-                        <form method="POST">
-                            <input type="hidden" name="id" value="<?= $row['id'] ?>">
-                            <td><?= htmlspecialchars($row['nombre']) ?></td>
-                            <td><?= htmlspecialchars($row['dia']) ?></td>
-                            <td><?= htmlspecialchars($row['entrada']) ?></td>
-                            <td><?= htmlspecialchars($row['salida']) ?></td>
-                            <td><?= htmlspecialchars($row['producto']) ?></td>
+                <td style="min-width: 120px;">
+                    <button class="btn-qr" onclick="mostrarQR(event, 'https://forcibly-legible-piglet.ngrok-free.app/Plataforma-registro/src/descargar_pdf.php?id=<?= $row['id'] ?>')" style="padding: 5px 10px; font-size: 13px;">Ver QR</button>
 
-                            <td style="min-width: 120px;">
-                                <button class="btn-qr" onclick="mostrarQR(event, '<?= $ngrok_url ?>/descargar_pdf.php?id=<?= $row['id'] ?>')" style="padding: 5px 10px; font-size: 13px;">Ver QR</button>
+                </td>
 
-                            </td>
+                <td style="min-width: 120px;">
+                    <a href="administrador.php?borrar=<?= $row['id'] ?>" onclick="return confirm('¿Estás seguro de borrar este registro?');">
+                        <button type="button" class="btn-borrar">Borrar</button>
+                    </a>
+                </td>
 
-                            <td style="min-width: 120px;">
-                                <a href="administrador.php?borrar=<?= $row['id'] ?>" onclick="return confirm('¿Estás seguro de borrar este registro?');">
-                                    <button type="button" class="btn-borrar">Borrar</button>
-                                </a>
-                            </td>
+                <td style="min-width: 120px;">
+                    <button type="button" class="btn-editar" onclick="abrirEdicion(
+    <?= $row['id'] ?>,
+    '<?= htmlspecialchars($row['nombre']) ?>',
+    '<?= htmlspecialchars($row['cedula']) ?>',
+    '<?= htmlspecialchars($row['dia']) ?>',
+    '<?= htmlspecialchars($row['entrada']) ?>',
+    '<?= htmlspecialchars($row['salida']) ?>',
+    '<?= htmlspecialchars($row['producto']) ?>',
+    '<?= htmlspecialchars($row['zona']) ?>'
+)">Editar</button>
 
-                            <td style="min-width: 120px;">
-                                <button type="button" class="btn-editar" onclick="abrirEdicion(<?= $row['id'] ?>, '<?= htmlspecialchars($row['nombre']) ?>', '<?= htmlspecialchars($row['dia']) ?>', '<?= htmlspecialchars($row['entrada']) ?>', '<?= htmlspecialchars($row['salida']) ?>', '<?= htmlspecialchars($row['producto']) ?>')">Editar</button>
-                            </td>
-                        </form>
-                    </tr>
-                <?php } ?>
-            </table>
+                </td>
+            </form>
+        </tr>
+    <?php } ?>
+</table>
+
 
         <?php } ?>
 
@@ -241,14 +272,40 @@ $resultado = $conn->query($consulta);
             <span class="close-btn" onclick="cerrarEdicion()">&times;</span>
             <h2>Editar Vendedor</h2>
             <form id="formEditar" method="POST">
-                <input type="hidden" name="id" id="edit-id">
-                <input type="text" name="nombre" id="edit-nombre" required>
-                <input type="text" name="dia" id="edit-dia" required>
-                <input type="time" name="entrada" id="edit-entrada" required>
-                <input type="time" name="salida" id="edit-salida" required>
-                <input type="text" name="producto" id="edit-producto" required>
-                <button type="submit" name="editar" class="btn-editar">Actualizar</button>
-            </form>
+    <input type="hidden" name="id" id="edit-id">
+
+    <label for="edit-nombre">Nombre:</label>
+    <input type="text" name="nombre" id="edit-nombre" required>
+
+    <label for="edit-cedula">Cédula:</label>
+    <input type="text" name="cedula" id="edit-cedula" maxlength="10" pattern="\d{10}" required
+           oninput="this.value = this.value.replace(/\D/g, '')"
+           title="La cédula debe contener exactamente 10 dígitos numéricos">
+
+    <label for="edit-dia">Día:</label>
+    <input type="text" name="dia" id="edit-dia" required>
+
+    <label for="edit-entrada">Hora de Entrada:</label>
+    <input type="time" name="entrada" id="edit-entrada" required>
+
+    <label for="edit-salida">Hora de Salida:</label>
+    <input type="time" name="salida" id="edit-salida" required>
+
+    <label for="edit-producto">Producto:</label>
+    <input type="text" name="producto" id="edit-producto" required>
+
+    <label for="edit-zona">Zona:</label>
+    <select name="zona" id="edit-zona" required>
+        <option value="">Seleccione una zona</option>
+        <option value="Facultad de Ingenierías">Facultad de Ingenierías</option>
+        <option value="Facultad de Ciencias Sociales y de Servicios">Facultad de Ciencias Sociales y de Servicios</option>
+        <option value="Facultad de Ciencias Administrativas y Económicas">Facultad de Ciencias Administrativas y Económicas</option>
+        <option value="Facultad de Pedagogía">Facultad de Pedagogía</option>
+    </select>
+
+    <button type="submit" name="editar" class="btn-editar">Actualizar</button>
+</form>
+
         </div>
     </div>
 
@@ -271,16 +328,19 @@ $resultado = $conn->query($consulta);
         modal.style.display = 'none'; 
     }
 
-    function abrirEdicion(id, nombre, dia, entrada, salida, producto) {
-        const modal = document.getElementById('modalEditar');
-        document.getElementById('edit-id').value = id;
-        document.getElementById('edit-nombre').value = nombre;
-        document.getElementById('edit-dia').value = dia;
-        document.getElementById('edit-entrada').value = entrada;
-        document.getElementById('edit-salida').value = salida;
-        document.getElementById('edit-producto').value = producto;
-        modal.style.display = 'flex'; // Modal flotante centrado
-    }
+    function abrirEdicion(id, nombre, cedula, dia, entrada, salida, producto, zona) {
+    const modal = document.getElementById('modalEditar');
+    document.getElementById('edit-id').value = id;
+    document.getElementById('edit-nombre').value = nombre;
+    document.getElementById('edit-cedula').value = cedula;
+    document.getElementById('edit-dia').value = dia;
+    document.getElementById('edit-entrada').value = entrada;
+    document.getElementById('edit-salida').value = salida;
+    document.getElementById('edit-producto').value = producto;
+    document.getElementById('edit-zona').value = zona;
+    modal.style.display = 'flex'; // Mostrar modal
+}
+
 
     function cerrarEdicion() {
         const modal = document.getElementById('modalEditar');

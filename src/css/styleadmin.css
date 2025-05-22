@@ -271,25 +271,54 @@ td button.btn-qr {
     background-color: rgba(0, 0, 0, 0.5);
     justify-content: center;
     align-items: center;
+    z-index: 10000;
 }
 
 .modalEditar .modal-content {
     background-color: white;
-    padding: 20px;
+    padding: 15px; /* Reducido */
     border-radius: 10px;
-    width: 400px;
-    max-width: 80%;
+    width: 400px; /* Más estrecho */
+    max-width: 90%;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    font-size: 14px; /* Texto más pequeño */
+}
+
+.modalEditar .modal-content input[type="text"],
+.modalEditar .modal-content input[type="time"],
+.modalEditar .modal-content select {
+    padding: 8px;
+    font-size: 14px;
+    margin-bottom: 10px;
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+.modalEditar .modal-content label {
+    font-size: 13px;
+    margin-bottom: 4px;
+    color: #333;
+}
+
+.modalEditar .modal-content button {
+    padding: 10px;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
 }
 
 .modalEditar .close-btn {
-    font-size: 30px;
+    font-size: 24px; /* Más pequeño */
     font-weight: bold;
     color: #aaa;
     cursor: pointer;
     position: absolute;
-    top: 10px;
-    right: 20px;
+    top: 8px;
+    right: 14px;
 }
 
 /* Formulario nuevo registro */
@@ -409,3 +438,5 @@ table tr:nth-child(even) {
         display: block;
     }
 }
+
+
