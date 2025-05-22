@@ -5,13 +5,11 @@ include 'conexion.php';
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
-    $role = trim($_POST['role'] ?? ''); // Capturamos el rol
 
-    // Validar que usuario, contraseña y rol no estén vacíos
-    if (empty($username) || empty($password) || empty($role)) {
+    if (empty($username) || empty($password)) {
         echo "<script>
-            alert('Por favor, ingresa usuario, contraseña y selecciona un rol.');
-            window.location.href = 'index.php';
+            alert('Por favor, ingresa usuario y contraseña.');
+            window.location.href = 'login.php';
         </script>";
         exit();
     }
@@ -24,18 +22,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($resultado->num_rows > 0) {
         $usuario = $resultado->fetch_assoc();
 
-        // Validar contraseña
         if ($password === $usuario['password']) {
-
-            // Validar que el rol enviado coincida con el rol del usuario en BD
-            if ($role !== $usuario['role']) {
-                echo "<script>
-                    alert('El rol seleccionado no coincide con el usuario.');
-                    window.location.href = 'index.php';
-                </script>";
-                exit();
-            }
-
             $_SESSION['username'] = $usuario['username'];
             $_SESSION['role'] = $usuario['role'];
 

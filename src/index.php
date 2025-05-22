@@ -33,6 +33,9 @@
       </div>
       <input type="hidden" id="role" name="role" value="">
 
+      <!-- Botón de Registrarse añadido aquí -->
+      <button type="button" class="btn" onclick="window.location.href='registro.php'">Registrarse</button>
+      <br><br>
       <button type="submit" class="btn">Ingresar</button>
     </form>
   </div>
