@@ -1,120 +1,190 @@
 <?php
 session_start();
-include 'conexion.php';
 
 if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'user') {
-    header('Location: index.php');
+    header("Location: index.php");
     exit();
 }
 
-$username = $_SESSION['username'];
-
-// Procesar el formulario si se envió
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_perfil'])) {
-    $nombre = trim($_POST['nombre']);
-    $correo = trim($_POST['correo']);
-    $telefono = trim($_POST['telefono']);
-
-    // Validar datos básicos
-    if (empty($nombre) || empty($correo)) {
-        $error = "Nombre y correo son obligatorios.";
-    } else {
-        // Verificar si ya existe el usuario en userinfo
-        $stmt = $conn->prepare("SELECT COUNT(*) AS count FROM userinfo WHERE username = ?");
-        $stmt->bind_param("s", $username);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result->fetch_assoc();
-        $stmt->close();
-
-        if ($row['count'] > 0) {
-            // Actualizar
-            $stmt = $conn->prepare("UPDATE userinfo SET nombre = ?, correo = ?, telefono = ? WHERE username = ?");
-            $stmt->bind_param("ssss", $nombre, $correo, $telefono, $username);
-        } else {
-            // Insertar
-            $stmt = $conn->prepare("INSERT INTO userinfo (username, nombre, correo, telefono) VALUES (?, ?, ?, ?)");
-            $stmt->bind_param("ssss", $username, $nombre, $correo, $telefono);
-        }
-
-        if ($stmt->execute()) {
-            $mensaje = "Perfil actualizado correctamente.";
-        } else {
-            $error = "Error al actualizar perfil. Intenta de nuevo.";
-        }
-
-        $stmt->close();
-    }
-}
-
-// Obtener datos actuales para mostrar (si hubo cambios, usar los recién guardados)
-$stmt = $conn->prepare("SELECT nombre, correo, telefono FROM userinfo WHERE username = ?");
-$stmt->bind_param("s", $username);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows === 0) {
-    $userData = ['nombre' => '', 'correo' => '', 'telefono' => ''];
-} else {
-    $userData = $result->fetch_assoc();
-}
-$stmt->close();
-$conn->close();
-
-// Control para mostrar formulario editable o solo vista
-$modoEdicion = isset($_POST['editar']) || ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar_perfil']));
-
+$nombre = htmlspecialchars($_SESSION['nombre']);
 ?>
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
     <title>Panel de Usuario</title>
-    <link rel="stylesheet" href="css/usuario.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f4f6f8;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: #2ecc71;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            color: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-container img {
+            height: 40px;
+            width: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 12px;
+            border: 2px solid white;
+            background: white;
+        }
+
+        .user-name {
+            font-size: 18px;
+            font-weight: 600;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .logout-btn {
+            background-color: transparent;
+            border: 2px solid #e74c3c;
+            color: #e74c3c;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .button-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-around;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn-large {
+            background-color: #ffffff;
+            border: 3px solid #2ecc71;
+            color: #2ecc71;
+            width: 250px;
+            height: 150px;
+            border-radius: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s ease;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .btn-large i {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .btn-large:hover {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .row {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="user-container">
-        <h1>Bienvenido, <?php echo htmlspecialchars($username); ?></h1>
 
-        <?php if (!empty($mensaje)) : ?>
-            <div class="mensaje-exito"><?php echo $mensaje; ?></div>
-        <?php endif; ?>
-        <?php if (!empty($error)) : ?>
-            <div class="mensaje-error"><?php echo $error; ?></div>
-        <?php endif; ?>
-
-        <h2>Mi Perfil</h2>
-
-        <?php if ($modoEdicion) : ?>
-            <form method="POST" action="usuario.php" class="edit-profile-form">
-                <label for="nombre">Nombre Completo:</label>
-                <input type="text" id="nombre" name="nombre" value="<?php echo htmlspecialchars($userData['nombre']); ?>" required>
-
-                <label for="correo">Correo Electrónico:</label>
-                <input type="email" id="correo" name="correo" value="<?php echo htmlspecialchars($userData['correo']); ?>" required>
-
-                <label for="telefono">Teléfono:</label>
-                <input type="tel" id="telefono" name="telefono" value="<?php echo htmlspecialchars($userData['telefono']); ?>">
-
-                <button type="submit" name="guardar_perfil" class="btn-primary">Guardar Cambios</button>
-            </form>
-            <form method="POST" action="usuario.php" style="margin-top: 1rem;">
-                <button type="submit" name="cancelar" class="btn-secondary">Cancelar</button>
-            </form>
-        <?php else: ?>
-            <div class="profile-info">
-                <p><strong>Nombre:</strong> <?php echo htmlspecialchars($userData['nombre']); ?></p>
-                <p><strong>Correo:</strong> <?php echo htmlspecialchars($userData['correo']); ?></p>
-                <p><strong>Teléfono:</strong> <?php echo htmlspecialchars($userData['telefono']); ?></p>
-            </div>
-
-            <form method="POST" action="usuario.php" style="margin-top: 1rem;">
-                <button type="submit" name="editar" class="btn-primary">Editar Perfil</button>
-            </form>
-        <?php endif; ?>
-
-        <a href="logout.php" class="logout-link">Cerrar sesión</a>
+<header>
+    <div class="logo-container">
+        <img src="assets/img/userlogo.png" alt="User Logo">
+        <div class="user-name" title="<?php echo $nombre; ?>"><?php echo $nombre; ?></div>
     </div>
+    <button class="logout-btn" onclick="location.href='logout.php'">Cerrar Sesión</button>
+</header>
+
+<div class="main-container">
+    <div class="button-grid">
+        <div class="row">
+            <button class="btn-large" onclick="location.href='soporte.php'">
+                <i class="fas fa-headset"></i>
+                Soporte
+            </button>
+            <button class="btn-large" onclick="location.href='cambiar_contrasena.php'">
+                <i class="fas fa-lock"></i>
+                Cambiar Contraseña
+            </button>
+            <button class="btn-large" onclick="location.href='registro_vendedor.php'">
+                <i class="fas fa-user-plus"></i>
+                Registrarme como Vendedor
+            </button>
+        </div>
+        <div class="row">
+            <button class="btn-large" onclick="location.href='ver_registros.php'">
+                <i class="fas fa-list"></i>
+                Ver Registro
+            </button>
+            <button class="btn-large" onclick="location.href='mis_ventas.php'">
+                <i class="fas fa-chart-line"></i>
+                Mis Ventas
+            </button>
+            <button class="btn-large" onclick="location.href='perfil.php'">
+                <i class="fas fa-id-badge"></i>
+                Ver Perfil
+            </button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

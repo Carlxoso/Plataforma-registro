@@ -19,24 +19,45 @@
     <div class="welcome-message" id="welcomeMessage">Bienvenido</div>
 
     <form action="login.php" method="POST" id="loginForm">
-      <div class="form-group">
-        <label for="username">Usuario</label>
-        <input type="text" id="username" name="username" required>
+      
+      <!-- Campos Login -->
+      <div id="loginFields">
+        <div class="form-group">
+          <label for="username">Usuario</label>
+          <input type="text" id="username" name="cedula" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" name="password" required>
+        </div>
+        <div class="role-buttons">
+          <button type="button" class="role-button" id="adminBtn" data-role="admin">Administrador</button>
+          <button type="button" class="role-button" id="userBtn" data-role="user">Usuario</button>
+        </div>
+        <input type="hidden" id="role" name="role" value="">
       </div>
-      <div class="form-group">
-        <label for="password">Contraseña</label>
-        <input type="password" id="password" name="password" required>
-      </div>
-      <div class="role-buttons">
-        <button type="button" class="role-button" id="adminBtn">Administrador</button>
-        <button type="button" class="role-button" id="userBtn">Usuario</button>
-      </div>
-      <input type="hidden" id="role" name="role" value="">
 
-      <!-- Botón de Registrarse añadido aquí -->
-      <button type="button" class="btn" onclick="window.location.href='registro.php'">Registrarse</button>
-      <br><br>
-      <button type="submit" class="btn">Ingresar</button>
+      <!-- Campos Registro -->
+      <div id="registerFields" style="display:none;">
+        <div class="form-group">
+          <label for="nombre_completo">Nombre completo</label>
+          <input type="text" id="nombre_completo" name="nombre_completo" >
+        </div>
+        <div class="form-group">
+          <label for="cedula_registro">Cédula</label>
+          <input type="text" id="cedula_registro" name="cedula_registro" >
+        </div>
+        <div class="form-group">
+          <label for="correo">Correo</label>
+          <input type="email" id="correo" name="correo" >
+        </div>
+      </div>
+
+      <button type="button" id="showRegisterBtn" class="btn" style="margin-bottom: 10px;">Registrarse</button>
+
+      <button type="submit" class="btn" id="submitBtn" disabled>Ingresar</button>
+
+
     </form>
   </div>
 

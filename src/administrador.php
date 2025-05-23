@@ -29,6 +29,7 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
+
 // Agregar vendedor
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['agregar'])) {
     $nombre = $_POST['nombre'];
