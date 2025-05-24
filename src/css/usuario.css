@@ -1,57 +1,151 @@
 
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
+        /* Tu CSS completo sin cambios */
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f4f6f8;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: #2ecc71;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            color: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-container img {
+            height: 40px;
+            width: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 12px;
+            border: 2px solid white;
+            background: white;
+        }
+
+        .user-name {
+            font-size: 18px;
+            font-weight: 600;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .logout-btn {
+            background-color: transparent;
+            border: 2px solid #e74c3c;
+            color: #e74c3c;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .button-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-around;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn-large {
+            background-color: #ffffff;
+            border: 3px solid #2ecc71;
+            color: #2ecc71;
+            width: 250px;
+            height: 150px;
+            border-radius: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s ease;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
+            justify-content: center;
+            text-align: center;
         }
-        header {
+
+        .btn-large i {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .btn-large:hover {
             background-color: #2ecc71;
-            width: 100%;
-            padding: 20px 0;
             color: white;
-            text-align: center;
-            font-size: 24px;
-            font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        main {
-            margin-top: 50px;
-            width: 320px;
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        button {
-            display: block;
-            width: 100%;
-            padding: 15px;
-            margin: 15px 0;
-            font-size: 16px;
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #219150;
-        }
-        .logout-btn {
-            background-color: #e74c3c;
-        }
-        .logout-btn:hover {
-            background-color: #c0392b;
-        }
-        .welcome {
-            font-size: 20px;
-            margin-bottom: 25px;
-            color: #333;
-        }
+        
+
+        @media (max-width: 600px) {
+    #registroModal > div {
+        flex-direction: column;
+        padding: 20px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    #registroModal img {
+        width: 100px;
+        height: auto;
+    }
+
+    #registroModal > div > div {
+        width: 100%;
+        text-align: center;
+    }
+
+    #registroModal h2 {
+        font-size: 16px;
+    }
+
+    #registroModal p {
+        font-size: 13px;
+    }
+
+    #qrcode {
+        margin-top: 20px;
+    }
+}
+
+    

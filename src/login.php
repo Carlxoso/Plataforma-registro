@@ -60,6 +60,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION['username'] = $usuario['cedula'];
             $_SESSION['nombre'] = $usuario['nombre_completo'];
             $_SESSION['role'] = $dbRoleNorm;
+            $_SESSION['cedula'] = $usuario['cedula'];
+
 
             $color = $dbRoleNorm === 'admin' ? '#e74c3c' : '#2ecc71';
             $destino = $dbRoleNorm === 'admin' ? 'administrador.php' : 'usuario.php';
