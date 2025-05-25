@@ -1,34 +1,28 @@
 <?php
 session_start();
 
-// Tiempo máximo de inactividad en segundos (ejemplo: 15 minutos)
+// Tiempo máximo de inactividad en segundos (15 minutos)
 $tiempoMaxInactividad = 15 * 60; 
 
-// Verificar si 'last_activity' existe en la sesión
+// Verificar tiempo de inactividad
 if (isset($_SESSION['last_activity'])) {
-    // Calcular el tiempo de inactividad
     $tiempoInactividad = time() - $_SESSION['last_activity'];
-
     if ($tiempoInactividad > $tiempoMaxInactividad) {
-        // Tiempo de inactividad excedido: cerrar sesión
         session_unset();
         session_destroy();
         header("Location: login.php?mensaje=sesion_expirada");
         exit();
     }
 }
-
-// Actualizar el tiempo de la última actividad
 $_SESSION['last_activity'] = time();
 
-include 'conexion.php';
-
-// Verificar si el usuario es administrador
+// Seguridad: solo admins
 if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     header("Location: login.php");
     exit();
 }
 
+include 'conexion.php';
 
 // Agregar vendedor
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['agregar'])) {
@@ -40,13 +34,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['agregar'])) {
     $producto = $_POST['producto'];
     $zona = $_POST['zona'];
 
-    // Validar cédula: debe tener exactamente 10 dígitos numéricos
     if (!preg_match('/^\d{10}$/', $cedula)) {
         echo "<script>alert('La cédula debe contener exactamente 10 dígitos numéricos'); window.history.back();</script>";
         exit;
     }
 
-    // Verificar si la cédula ya existe
     $stmt = $conn->prepare("SELECT cedula FROM vendedores WHERE cedula = ?");
     $stmt->bind_param("s", $cedula);
     $stmt->execute();
@@ -57,7 +49,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['agregar'])) {
         echo "<script>alert('Error: Ya existe un vendedor con esa cédula'); window.location.href='administrador.php?agregar_registro=true';</script>";
     } else {
         $stmt->close();
-        // Insertar nuevo registro
         $stmt = $conn->prepare("INSERT INTO vendedores (nombre, cedula, dia, entrada, salida, producto, zona) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("sssssss", $nombre, $cedula, $dia, $entrada, $salida, $producto, $zona);
         $stmt->execute();
@@ -76,13 +67,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['editar'])) {
     $producto = $_POST['producto'];
     $zona = $_POST['zona'];
 
-    // Validar cédula nuevamente
     if (!preg_match('/^\d{10}$/', $cedula)) {
         echo "<script>alert('La cédula debe contener exactamente 10 dígitos numéricos'); window.history.back();</script>";
         exit;
     }
 
-    // Actualizar registro
     $stmt = $conn->prepare("UPDATE vendedores SET nombre = ?, dia = ?, entrada = ?, salida = ?, producto = ?, zona = ? WHERE cedula = ?");
     $stmt->bind_param("sssssss", $nombre, $dia, $entrada, $salida, $producto, $zona, $cedula);
     $stmt->execute();
@@ -100,25 +89,16 @@ if (isset($_GET['borrar'])) {
     echo "<script>alert('Vendedor eliminado correctamente'); window.location.href='administrador.php';</script>";
 }
 
-// Obtener orden de filtro si se ha seleccionado
+// Filtro de orden
 $orden = isset($_GET['orden']) ? $_GET['orden'] : '';
-
-// Construir la consulta con el orden correspondiente
 $consulta = "SELECT * FROM vendedores";
 switch ($orden) {
-    case 'nombre':
-        $consulta .= " ORDER BY nombre ASC";
-        break;
-    case 'entrada':
-        $consulta .= " ORDER BY entrada ASC";
-        break;
-    case 'salida':
-        $consulta .= " ORDER BY salida ASC";
-        break;
+    case 'nombre': $consulta .= " ORDER BY nombre ASC"; break;
+    case 'entrada': $consulta .= " ORDER BY entrada ASC"; break;
+    case 'salida': $consulta .= " ORDER BY salida ASC"; break;
 }
 $resultado = $conn->query($consulta);
 ?>
-
 
 
 <!DOCTYPE html>
@@ -386,8 +366,14 @@ $resultado = $conn->query($consulta);
     });
 </script>
 
+<script>
+    // Previene que se pueda usar el botón de retroceso para regresar al login
+    history.pushState(null, null, location.href);
+    window.onpopstate = function () {
+        history.go(1);
+    };
+</script>
 
-
-    
+ 
 </body>
 </html>

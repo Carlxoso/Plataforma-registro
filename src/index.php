@@ -1,3 +1,15 @@
+<?php
+session_start();
+if (isset($_SESSION['username']) && $_SESSION['role'] === 'user') {
+    header("Location: usuario.php");
+    exit();
+}
+if (isset($_SESSION['username']) && $_SESSION['role'] === 'admin') {
+    header("Location: administrador.php");
+    exit();
+}
+?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,6 +17,7 @@
   <link rel="stylesheet" href="css/style.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registro de vendedores</title>
+  
 </head>
 <body>
 
@@ -62,5 +75,7 @@
   </div>
 
   <script src="js/scripts.js"></script>
+
+  
 </body>
 </html>
