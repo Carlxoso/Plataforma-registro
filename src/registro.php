@@ -14,15 +14,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     $nombre = trim($_POST['nombre_completo']);
-    $cedula = trim($_POST['cedula']);
-    $correo = trim($_POST['correo']);
-    $password = trim($_POST['password']);
+$cedula = trim($_POST['cedula']);
+$correo = trim($_POST['correo']);
+$password = trim($_POST['password']);
 
-    if (empty($nombre) || empty($cedula) || empty($correo) || empty($password)) {
-        $mensaje = "Por favor completa todos los campos.";
-    } elseif (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
-        $mensaje = "Correo electrónico no válido.";
-    } else {
+if (empty($nombre) || empty($cedula) || empty($correo) || empty($password)) {
+    $mensaje = "Por favor completa todos los campos.";
+} elseif (!preg_match('/^\d{1,10}$/', $cedula)) {
+    $mensaje = "La cédula debe contener solo números y tener un máximo de 10 dígitos.";
+} elseif (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+    $mensaje = "Correo electrónico no válido.";
+} else {
+
+
         // Verificar si cédula o correo ya existen
         $stmtCheck = $conn->prepare("SELECT * FROM usuregistro WHERE cedula = ? OR correo = ?");
         $stmtCheck->bind_param("ss", $cedula, $correo);
@@ -82,28 +86,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <?php endif; ?>
 
     <form method="POST" action="registro.php">
-        <div class="form-group">
-            <label for="nombre_completo">Nombre completo:</label>
-            <input type="text" id="nombre_completo" name="nombre_completo" required />
-        </div>
+    <div class="form-group">
+        <label for="nombre_completo">Nombre completo:</label>
+        <input type="text" id="nombre_completo" name="nombre_completo" required />
+    </div>
 
-        <div class="form-group">
-            <label for="cedula">Cédula:</label>
-            <input type="text" id="cedula" name="cedula" required />
-        </div>
+    <div class="form-group">
+    <label for="cedula">Cédula:</label>
+    <input type="text" id="cedula" name="cedula" required
+           pattern="\d{1,10}" maxlength="10" inputmode="numeric"
+           title="La cédula debe contener solo números y tener un máximo de 10 dígitos" />
+</div>
 
-        <div class="form-group">
-            <label for="correo">Correo electrónico:</label>
-            <input type="email" id="correo" name="correo" required />
-        </div>
 
-        <div class="form-group">
-            <label for="password">Contraseña:</label>
-            <input type="password" id="password" name="password" required />
-        </div>
+    <div class="form-group">
+        <label for="correo">Correo electrónico:</label>
+        <input type="email" id="correo" name="correo" required />
+    </div>
 
-        <button type="submit" class="btn">Registrar</button>
-    </form>
+    <div class="form-group">
+        <label for="password">Contraseña:</label>
+        <input type="password" id="password" name="password" required />
+    </div>
+
+    <button type="submit" class="btn">Registrar</button>
+</form>
+
 
     <div style="margin-top: 15px;">
         <a href="index.php" class="btn" style="display: block; text-align: center; width: 100%; box-sizing: border-box; text-decoration: none;">
@@ -111,5 +119,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </a>
     </div>
 </div>
+
+<script>
+document.getElementById('cedula').addEventListener('input', function (e) {
+    // Elimina cualquier caracter que no sea un dígito
+    this.value = this.value.replace(/\D/g, '');
+});
+</script>
+
+
 </body>
 </html>
