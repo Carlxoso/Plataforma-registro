@@ -49,8 +49,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['agregar'])) {
         echo "<script>alert('Error: Ya existe un vendedor con esa cédula'); window.location.href='administrador.php?agregar_registro=true';</script>";
     } else {
         $stmt->close();
-        $stmt = $conn->prepare("INSERT INTO vendedores (nombre, cedula, dia, entrada, salida, producto, zona) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO vendedores (nombre, cedula, dia, entrada, salida, producto, zona, fecha_registro) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
         $stmt->bind_param("sssssss", $nombre, $cedula, $dia, $entrada, $salida, $producto, $zona);
+
         $stmt->execute();
         $stmt->close();
         echo "<script>alert('Vendedor agregado correctamente'); window.location.href='administrador.php';</script>";
@@ -89,15 +90,42 @@ if (isset($_GET['borrar'])) {
     echo "<script>alert('Vendedor eliminado correctamente'); window.location.href='administrador.php';</script>";
 }
 
+// Desactivar vendedor
+if (isset($_GET['inactivar'])) {
+    $id = $_GET['inactivar'];
+    $stmt = $conn->prepare("UPDATE vendedores SET activo = 0 WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $stmt->close();
+    echo "<script>alert('Vendedor inactivado'); window.location.href='administrador.php';</script>";
+    exit;
+}
+
+// Activar vendedor
+if (isset($_GET['activar'])) {
+    $id = $_GET['activar'];
+    $stmt = $conn->prepare("UPDATE vendedores SET activo = 1 WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $stmt->close();
+    echo "<script>alert('Vendedor activado'); window.location.href='administrador.php';</script>";
+    exit;
+}
+
 // Filtro de orden
 $orden = isset($_GET['orden']) ? $_GET['orden'] : '';
-$consulta = "SELECT * FROM vendedores";
+$consulta = "SELECT * FROM vendedores WHERE activo = 1"; // Solo vendedores activos
 switch ($orden) {
     case 'nombre': $consulta .= " ORDER BY nombre ASC"; break;
     case 'entrada': $consulta .= " ORDER BY entrada ASC"; break;
     case 'salida': $consulta .= " ORDER BY salida ASC"; break;
 }
 $resultado = $conn->query($consulta);
+
+// Consulta de vendedores inactivos
+$consulta_inactivos = "SELECT * FROM vendedores WHERE activo = 0";
+$resultado_inactivos = $conn->query($consulta_inactivos);
+
 ?>
 
 
@@ -126,10 +154,87 @@ $resultado = $conn->query($consulta);
             <img src="assets/img/userlogo.png" alt="Admin Logo"> Administrador
         </div>
         <ul>
+            <li><a href="#" id="verPerfilBtn"><b>Ver perfil</b></a></li>
             <li><a href="administrador.php">Ver registros actuales</a></li>
             <li><a href="administrador.php?agregar_registro=true">Agregar un nuevo registro</a></li>
         </ul>
     </div>
+
+    <!-- Modal de Perfil -->
+<div id="perfilModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <div id="perfilContenido"></div>
+    </div>
+</div>
+
+<!-- Estilos del modal -->
+<style>
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 10px;
+    width: 400px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    text-align: left;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+}
+</style>
+
+
+
+<script>
+document.getElementById('verPerfilBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+
+    fetch('adminperfil.php')
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        const contenido = `
+            <p><strong>Nombre completo:</strong> ${data.nombre_completo}</p>
+            <p><strong>Cédula:</strong> ${data.cedula}</p>
+            <p><strong>Correo:</strong> ${data.correo}</p>
+            <p><strong>Fecha de registro:</strong> ${data.fecha_registro}</p>
+            <p><strong>Rol:</strong> ${data.role}</p>
+        `;
+
+        document.getElementById('contenidoPerfil').innerHTML = contenido;
+        document.getElementById('modalPerfil').style.display = 'flex';
+    })
+    .catch(error => {
+        console.error('Error al cargar el perfil:', error);
+        alert('Error al cargar el perfil');
+    });
+});
+
+function cerrarModal() {
+    document.getElementById('modalPerfil').style.display = 'none';
+}
+</script>
+
 
     <!-- Menu Toggle Button -->
     <div class="menu-toggle" onclick="toggleMenu()">
@@ -184,6 +289,9 @@ $resultado = $conn->query($consulta);
     </select>
 </div>
 
+<input type="hidden" name="fecha_registro" id="fecha_registro">
+
+
         </div>
         <button type="submit" name="agregar" class="btn-agregar">Agregar</button>
     </div>
@@ -203,6 +311,7 @@ $resultado = $conn->query($consulta);
         <th>Salida</th>
         <th>Producto</th>
         <th>Zona</th>
+        <th>Fecha de Registro</th>
         <th>QR</th>
         <th>Eliminar</th>
         <th>Editar</th>
@@ -221,17 +330,20 @@ $resultado = $conn->query($consulta);
                 <td><?= htmlspecialchars($row['salida']) ?></td>
                 <td><?= htmlspecialchars($row['producto']) ?></td>
                 <td><?= htmlspecialchars($row['zona']) ?></td>
+                <td><?= htmlspecialchars($row['fecha_registro']) ?></td>
+
 
                 <td style="min-width: 120px;">
                     <button class="btn-qr" onclick="mostrarQR(event, 'https://forcibly-legible-piglet.ngrok-free.app/Plataforma-registro/src/descargar_pdf.php?id=<?= $row['id'] ?>')" style="padding: 5px 10px; font-size: 13px;">Ver QR</button>
 
                 </td>
 
-                <td style="min-width: 120px;">
-                    <a href="administrador.php?borrar=<?= $row['id'] ?>" onclick="return confirm('¿Estás seguro de borrar este registro?');">
-                        <button type="button" class="btn-borrar">Borrar</button>
-                    </a>
+                <td>
+                 <a href="administrador.php?inactivar=<?= $row['id'] ?>" onclick="return confirm('¿Inactivar este vendedor?');">
+                 <button type="button" class="btn-borrar">Inactivar</button>
+                 </a>
                 </td>
+
 
                 <td style="min-width: 120px;">
                     <button type="button" class="btn-editar" onclick="abrirEdicion(
@@ -242,14 +354,63 @@ $resultado = $conn->query($consulta);
     '<?= htmlspecialchars($row['entrada']) ?>',
     '<?= htmlspecialchars($row['salida']) ?>',
     '<?= htmlspecialchars($row['producto']) ?>',
-    '<?= htmlspecialchars($row['zona']) ?>'
+    '<?= htmlspecialchars($row['zona']) ?>',
+    '<?= htmlspecialchars($row['fecha_registro']) ?>'
 )">Editar</button>
+
 
                 </td>
             </form>
         </tr>
     <?php } ?>
+
+    
 </table>
+
+<h2 style="margin-top: 40px;">Vendedores Inactivos</h2>
+
+<!-- Mensaje si no hay vendedores inactivos -->
+<p id="mensajeSinInactivos" style="text-align: center; font-weight: bold; color: #777;">
+    En esta sección aún no hay vendedores inactivos.
+</p>
+
+<!-- Tabla de vendedores inactivos -->
+<table id="tablaInactivos" style="width: 100%; border-collapse: collapse; background-color: #f9f9f9; display: none;">
+    <tr style="background-color: #e74c3c; color: white;">
+        <th>Nombre</th>
+        <th>Cédula</th>
+        <th>Día</th>
+        <th>Entrada</th>
+        <th>Salida</th>
+        <th>Producto</th>
+        <th>Zona</th>
+        <th>Fecha de Registro</th>
+        <th>Activar</th>
+    </tr>
+
+    <?php
+    $tieneInactivos = false;
+    while ($row = $resultado_inactivos->fetch_assoc()) {
+        $tieneInactivos = true;
+    ?>
+        <tr style="opacity: 0.5;">
+            <td><?= htmlspecialchars($row['nombre']) ?></td>
+            <td><?= htmlspecialchars($row['cedula']) ?></td>
+            <td><?= htmlspecialchars($row['dia']) ?></td>
+            <td><?= htmlspecialchars($row['entrada']) ?></td>
+            <td><?= htmlspecialchars($row['salida']) ?></td>
+            <td><?= htmlspecialchars($row['producto']) ?></td>
+            <td><?= htmlspecialchars($row['zona']) ?></td>
+            <td><?= htmlspecialchars($row['fecha_registro']) ?></td>
+            <td>
+                <a href="administrador.php?activar=<?= $row['id'] ?>" onclick="return confirm('¿Activar este vendedor?');">
+                    <button type="button" class="btn-editar">Activar</button>
+                </a>
+            </td>
+        </tr>
+    <?php } ?>
+</table>
+
 
 
         <?php } ?>
@@ -305,6 +466,10 @@ $resultado = $conn->query($consulta);
         <option value="Facultad de Pedagogía">Facultad de Pedagogía</option>
     </select>
 
+    <label for="edit-fecha">Fecha de Registro</label>
+    <input type="text" id="edit-fecha" name="fecha_registro" readonly>
+
+
     <button type="submit" name="editar" class="btn-editar">Actualizar</button>
 </form>
 
@@ -330,8 +495,7 @@ $resultado = $conn->query($consulta);
         modal.style.display = 'none'; 
     }
 
-    function abrirEdicion(id, nombre, cedula, dia, entrada, salida, producto, zona) {
-    const modal = document.getElementById('modalEditar');
+    function abrirEdicion(id, nombre, cedula, dia, entrada, salida, producto, zona, fecha_registro) {
     document.getElementById('edit-id').value = id;
     document.getElementById('edit-nombre').value = nombre;
     document.getElementById('edit-cedula').value = cedula;
@@ -339,15 +503,16 @@ $resultado = $conn->query($consulta);
     document.getElementById('edit-entrada').value = entrada;
     document.getElementById('edit-salida').value = salida;
     document.getElementById('edit-producto').value = producto;
+    document.getElementById('edit-fecha').value = fecha_registro;  // ahora sí definido
     document.getElementById('edit-zona').value = zona;
-    modal.style.display = 'flex'; // Mostrar modal
+
+    document.getElementById('modalEditar').style.display = 'flex';
 }
 
 
-    function cerrarEdicion() {
-        const modal = document.getElementById('modalEditar');
-        modal.style.display = 'none'; // Cerrar modal flotante
-    }
+function cerrarEdicion() {
+    document.getElementById('modalEditar').style.display = 'none';
+}
     </script>
 
     <script>
@@ -373,6 +538,46 @@ $resultado = $conn->query($consulta);
         history.go(1);
     };
 </script>
+
+<!-- Mostrar u ocultar tabla/mensaje según si hay resultados -->
+<script>
+    const tieneInactivos = <?= $tieneInactivos ? 'true' : 'false' ?>;
+    if (tieneInactivos) {
+        document.getElementById('tablaInactivos').style.display = 'table';
+        document.getElementById('mensajeSinInactivos').style.display = 'none';
+    } else {
+        document.getElementById('tablaInactivos').style.display = 'none';
+        document.getElementById('mensajeSinInactivos').style.display = 'block';
+    }
+</script>
+
+<script>
+document.getElementById('verPerfilBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    fetch('adminperfil.php')
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('perfilContenido').innerHTML = html;
+            document.getElementById('perfilModal').style.display = 'block';
+        })
+        .catch(err => {
+            alert('Error al cargar el perfil.');
+            console.error(err);
+        });
+});
+
+document.querySelector('.close').addEventListener('click', function() {
+    document.getElementById('perfilModal').style.display = 'none';
+});
+
+window.onclick = function(event) {
+    const modal = document.getElementById('perfilModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+};
+</script>
+
 
  
 </body>
