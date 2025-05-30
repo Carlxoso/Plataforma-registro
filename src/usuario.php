@@ -1,21 +1,23 @@
-        <?php
-        session_start();
+<?php
+session_start();
 
-        if (!isset($_SESSION['username'])) {
+// Verificación de sesión
+if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'user') {
     header("Location: login.php");
     exit();
 }
 
+// Procesar registro si viene por POST
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     require 'conexion.php';
 
-    $nombre = $_POST['nombre'];
-    $cedula = $_POST['cedula'];
-    $dia = $_POST['dia'];
-    $entrada = $_POST['entrada'];
-    $salida = $_POST['salida'];
+    $nombre   = $_POST['nombre'];
+    $cedula   = $_POST['cedula'];
+    $dia      = $_POST['dia'];
+    $entrada  = $_POST['entrada'];
+    $salida   = $_POST['salida'];
     $producto = $_POST['producto'];
-    $zona = $_POST['zona'];
+    $zona     = $_POST['zona'];
 
     if ($dia && $entrada && $salida && $producto && $zona && ($salida > $entrada)) {
         $sql = "INSERT INTO vendedores (nombre, cedula, dia, entrada, salida, producto, zona) VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -35,28 +37,46 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-        if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'user') {
-            header("Location: index.php");
-            exit();
-        }
+// Verificación repetida por seguridad
+if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'user') {
+    header("Location: index.php");
+    exit();
+}
 
-        $nombre = htmlspecialchars($_SESSION['nombre']);
-        $cedula = $_SESSION['username']; // cédula guardada en sesión
+require 'conexion.php';
 
-        require 'conexion.php';
+// Datos de sesión
+$cedula = $_SESSION['username']; // la cédula es el "username"
+$nombre = htmlspecialchars($_SESSION['nombre']); // nombre completo desde sesión
 
-        // Verificar si ya es vendedor
-        $stmt = $conn->prepare("SELECT * FROM vendedores WHERE cedula = ?");
-        $stmt->bind_param("s", $cedula);
-        $stmt->execute();
-        $result = $stmt->get_result();
+// Verificar si ya es vendedor
+$stmt = $conn->prepare("SELECT * FROM vendedores WHERE cedula = ?");
+$stmt->bind_param("s", $cedula);
+$stmt->execute();
+$result = $stmt->get_result();
 
-        $esVendedor = $result->num_rows > 0;
-        $datosVendedor = $esVendedor ? $result->fetch_assoc() : null;
+$esVendedor = $result->num_rows > 0;
+$datosVendedor = $esVendedor ? $result->fetch_assoc() : null;
+$stmt->close();
 
-        $stmt->close();
-        $conn->close();
-        ?>
+// Obtener la foto desde la tabla usuregistro
+$stmtFoto = $conn->prepare("SELECT foto_perfil FROM usuregistro WHERE cedula = ?");
+$stmtFoto->bind_param("s", $cedula);
+$stmtFoto->execute();
+$resultFoto = $stmtFoto->get_result();
+
+$fotoVendedor = 'uploads/default.jpg'; // Valor por defecto
+if ($rowFoto = $resultFoto->fetch_assoc()) {
+    if (!empty($rowFoto['foto_perfil'])) {
+        $fotoVendedor = $rowFoto['foto_perfil'];
+    }
+}
+
+$stmtFoto->close();
+$conn->close();
+?>
+
+
 
         <!DOCTYPE html>
         <html lang="es">
@@ -130,33 +150,175 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 #modalRegistroVendedor .modal-content button.submit-btn:hover {
                     background: #219150;
                 }
+                
             </style>
         </head>
         <body>
 
         <header>
             <div class="logo-container">
-                <img src="assets/img/userlogo.png" alt="User Logo" />
-                <div class="user-name" title="<?php echo $nombre; ?>"><?php echo $nombre; ?></div>
-            </div>
+    <img src="<?php echo $fotoVendedor; ?>" alt="Foto de perfil" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;" />
+    <div class="user-name" title="<?php echo $nombre; ?>"><?php echo $nombre; ?></div>
+</div>
             <button class="logout-btn" onclick="location.href='logout.php'">Cerrar Sesión</button>
         </header>
 
         <div class="main-container">
             <div class="button-grid">
                 <div class="row">
-                    <button class="btn-large" onclick="location.href='soporte.php'">
-                        <i class="fas fa-headset"></i>
-                        Soporte
-                    </button>
-                    <button class="btn-large" onclick="location.href='cambiar_contrasena.php'">
-                        <i class="fas fa-lock"></i>
-                        Cambiar Contraseña
-                    </button>
+                    <button class="btn-large" onclick="document.getElementById('faqModal').style.display='flex'">
+    <i class="fas fa-headset"></i> Soporte
+</button>
+
+<!-- MODAL FAQ -->
+<div id="faqModal" style="
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0, 0, 0, 0.7);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    overflow-y: auto;
+    padding: 20px;
+    box-sizing: border-box;
+">
+    <div style="
+        background: #fff;
+        border-radius: 12px;
+        max-width: 700px;
+        width: 100%;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        padding: 30px 40px;
+        position: relative;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    ">
+        <!-- Botón cerrar -->
+        <button onclick="document.getElementById('faqModal').style.display='none'" 
+            style="
+                position: absolute;
+                top: 15px; right: 15px;
+                background: transparent;
+                border: none;
+                font-size: 28px;
+                font-weight: bold;
+                cursor: pointer;
+                color: #e74c3c;
+                transition: color 0.3s ease;
+            "
+            onmouseover="this.style.color='#c0392b'"
+            onmouseout="this.style.color='#e74c3c'">&times;</button>
+
+        <h2 style="margin-bottom: 25px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
+            Preguntas Frecuentes (FAQ)
+        </h2>
+
+        <div style="margin-bottom: 20px;">
+            <h3 style="margin-bottom: 8px; color: #2980b9; cursor: pointer;" onclick="toggleFAQ(this)">
+                ¿Cómo puedo actualizar mi foto de perfil? <span style="float: right;">&#x25BC;</span>
+            </h3>
+            <p style="margin-left: 10px; line-height: 1.5; display: none;">
+                Ve a tu perfil, selecciona una nueva foto y haz clic en "Actualizar Foto".
+            </p>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <h3 style="margin-bottom: 8px; color: #2980b9; cursor: pointer;" onclick="toggleFAQ(this)">
+                ¿Dónde puedo ver mi horario de ventas? <span style="float: right;">&#x25BC;</span>
+            </h3>
+            <p style="margin-left: 10px; line-height: 1.5; display: none;">
+                Después de registrarte como vendedor, tu horario aparece en la sección principal.
+            </p>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <h3 style="margin-bottom: 8px; color: #2980b9; cursor: pointer;" onclick="toggleFAQ(this)">
+                ¿Cómo cambio mi zona de ventas? <span style="float: right;">&#x25BC;</span>
+            </h3>
+            <p style="margin-left: 10px; line-height: 1.5; display: none;">
+                Para cambiar tu zona, contacta con el administrador o edita tu información desde el perfil si está habilitado.
+            </p>
+        </div>
+
+        <div style="margin-bottom: 0;">
+            <h3 style="margin-bottom: 8px; color: #2980b9; cursor: pointer;" onclick="toggleFAQ(this)">
+                ¿Tengo que registrar mi cédula cada vez? <span style="float: right;">&#x25BC;</span>
+            </h3>
+            <p style="margin-left: 10px; line-height: 1.5; display: none;">
+                No, tu cédula se guarda automáticamente al iniciar sesión.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleFAQ(header) {
+    const p = header.nextElementSibling;
+    const arrow = header.querySelector('span');
+    if (p.style.display === 'block') {
+        p.style.display = 'none';
+        arrow.innerHTML = '&#x25BC;';
+    } else {
+        p.style.display = 'block';
+        arrow.innerHTML = '&#x25B2;';
+    }
+}
+</script>
+
+
+
+                    <button class="btn-large" onclick="document.getElementById('modalCambioPass').style.display='flex'">
+    <i class="fas fa-lock"></i>
+    Cambiar Contraseña
+</button>
+
+<div id="modalCambioPass" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:1000; padding:20px; box-sizing:border-box;">
+  <div style="background:#fff; padding:30px; border-radius:10px; max-width:400px; width:100%; position:relative; box-shadow:0 5px 15px rgba(0,0,0,0.3);">
+    <button onclick="document.getElementById('modalCambioPass').style.display='none'" style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:28px; font-weight:bold; cursor:pointer; color:#e74c3c;">&times;</button>
+    <h2 style="margin-bottom:20px; color:#333;">Cambiar Contraseña</h2>
+    <form id="formCambioPass" method="POST" action="procesar_cambio_password.php">
+      <label for="password_actual" style="display:block; margin-bottom:6px;">Contraseña Actual:</label>
+      <input type="password" id="password_actual" name="password_actual" required style="width:100%; padding:8px; margin-bottom:15px;" />
+
+      <label for="nueva_password" style="display:block; margin-bottom:6px;">Nueva Contraseña:</label>
+      <input type="password" id="nueva_password" name="nueva_password" required style="width:100%; padding:8px; margin-bottom:15px;" />
+
+      <label for="confirmar_password" style="display:block; margin-bottom:6px;">Confirmar Nueva Contraseña:</label>
+      <input type="password" id="confirmar_password" name="confirmar_password" required style="width:100%; padding:8px; margin-bottom:20px;" />
+
+      <button type="submit" style="background-color:#3498db; color:#fff; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; width:100%;">Guardar Cambios</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Cerrar modal si haces clic fuera del contenido
+  window.onclick = function(event) {
+    const modal = document.getElementById('modalCambioPass');
+    if (event.target === modal) {
+      modal.style.display = "none";
+    }
+  }
+
+  // Validación simple antes de enviar el formulario
+  document.getElementById('formCambioPass').addEventListener('submit', function(e) {
+    const nueva = document.getElementById('nueva_password').value;
+    const confirmar = document.getElementById('confirmar_password').value;
+    if (nueva !== confirmar) {
+      alert("La nueva contraseña y la confirmación no coinciden.");
+      e.preventDefault();
+    }
+  });
+</script>
+
+
+
                     <button class="btn-large" onclick="abrirModalRegistro()" id="btnRegistroVendedor">
                         <i class="fas fa-user-plus"></i>
                         Registrarme como Vendedor
                     </button>
+
                 </div>
                 <div class="row">
                     <button class="btn-large" onclick="mostrarRegistro()">
@@ -167,45 +329,166 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <i class="fas fa-chart-line"></i>
                         Mis Ventas
                     </button>
-                    <button class="btn-large" onclick="location.href='perfil.php'">
-                        <i class="fas fa-id-badge"></i>
-                        Ver Perfil
-                    </button>
+                    <button class="btn-large" onclick="document.getElementById('perfilModal').style.display='flex'">
+    <i class="fas fa-id-badge"></i>
+    Ver Perfil
+</button>
+
                 </div>
             </div>
         </div>
 
-        <!-- Modal para ver registro (solo si es vendedor) -->
-        <?php if ($esVendedor): ?>
-        <div id="registroModal" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 999;">
-            <div style="background: white; padding: 25px 35px 35px 35px; border-radius: 10px; width: 90%; max-width: 600px; position: relative; display: flex; gap: 25px; align-items: center;">
+        <!-- Modal perfil -->
+<div id="perfilModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:1000; overflow:auto; padding:20px; box-sizing:border-box;">
+    <div style="background:#fff; padding:30px; border-radius:10px; max-width:500px; width:100%; position:relative; box-shadow:0 5px 15px rgba(0,0,0,0.3);">
+        <button onclick="document.getElementById('perfilModal').style.display='none'" style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:28px; font-weight:bold; cursor:pointer; color:#e74c3c;">&times;</button>
 
-                <button onclick="cerrarModal()" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 26px; font-weight: bold; cursor: pointer; color: #e74c3c;">&times;</button>
+        <h2 style="margin-bottom: 20px; color:#333;">Editar Perfil</h2>
 
-                <!-- FOTO LADO IZQUIERDO -->
-                <div style="flex: 0 0 120px; height: 125px; border: 3px solid rgb(0, 0, 0); border-radius: 8px; overflow: visible; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); background: white; display: flex; justify-content: center; align-items: center;">
-                    <img src="assets/img/carnetlogo.png" alt="Foto del vendedor" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
-                </div>
+        <form id="formPerfil" method="POST" action="actualizar_perfil.php">
+            <input type="hidden" name="cedula" value="<?php echo htmlspecialchars($cedula); ?>">
 
-                <!-- INFO LADO MEDIO -->
-                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #333;">
-                    <h2 style="margin: 0 0 10px 0; color: #2ecc71; font-size: 18px;">Información de Registro</h2>
-                    <p><strong>Nombre:</strong> <?php echo htmlspecialchars($datosVendedor['nombre']); ?></p>
-                    <p><strong>Cédula:</strong> <?php echo htmlspecialchars($datosVendedor['cedula']); ?></p>
-                    <p><strong>Día:</strong> <?php echo htmlspecialchars($datosVendedor['dia']); ?></p>
-                    <p><strong>Hora Entrada:</strong> <?php echo htmlspecialchars($datosVendedor['entrada']); ?></p>
-                    <p><strong>Hora Salida:</strong> <?php echo htmlspecialchars($datosVendedor['salida']); ?></p>
-                    <p><strong>Producto:</strong> <?php echo htmlspecialchars($datosVendedor['producto']); ?></p>
-                    <p><strong>Zona Autorizada:</strong> <?php echo htmlspecialchars($datosVendedor['zona']); ?></p>
-                </div>
+            <label for="nombre_completo" style="display:block; margin-bottom:6px;">Nombre Completo:</label>
+            <input type="text" id="nombre_completo" name="nombre_completo" value="<?php echo htmlspecialchars($_SESSION['nombre']); ?>" required style="width:100%; padding:8px; margin-bottom:15px;">
 
-                <!-- QR LADO DERECHO -->
-                <div style="flex: 0 0 160px; height: auto; display: flex; justify-content: center; align-items: center; padding: 10px;">
-                    <div id="qrcode" style="width: 140px; height: 140px;"></div>
-                </div>
-            </div>
+            <label for="correo" style="display:block; margin-bottom:6px;">Correo Electrónico:</label>
+            <input type="email" id="correo" name="correo" value="<?php 
+                // Para mostrar correo, necesitas consultarlo de la base. Puedes cargarlo con JS o PHP. 
+                // Aquí un ejemplo simple con PHP:
+                require 'conexion.php';
+                $correo = '';
+                if ($conn) {
+                    $stmtCorreo = $conn->prepare("SELECT correo FROM usuregistro WHERE cedula=?");
+                    $stmtCorreo->bind_param("s", $cedula);
+                    $stmtCorreo->execute();
+                    $resCorreo = $stmtCorreo->get_result();
+                    if ($rowCorreo = $resCorreo->fetch_assoc()) {
+                        $correo = $rowCorreo['correo'];
+                    }
+                    $stmtCorreo->close();
+                    $conn->close();
+                }
+                echo htmlspecialchars($correo);
+            ?>" required style="width:100%; padding:8px; margin-bottom:15px;">
+
+            <button type="submit" style="background-color:#3498db; color:#fff; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">Guardar Cambios</button>
+        </form>
+    </div>
+</div>
+
+<script>
+window.onclick = function(event) {
+    const modal = document.getElementById('perfilModal');
+    if (event.target === modal) {
+        modal.style.display = "none";
+    }
+}
+</script>
+
+
+
+<?php if ($esVendedor): ?>
+<div id="registroModal" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 999;">
+    <div style="background: white; padding: 25px 35px 35px 35px; border-radius: 10px; width: 95%; max-width: 850px; position: relative; display: flex; gap: 30px; align-items: center; flex-wrap: wrap;">
+
+        <!-- Botón cerrar -->
+        <button onclick="cerrarModal()" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 26px; font-weight: bold; cursor: pointer; color: #e74c3c;">&times;</button>
+
+        <!-- FOTO PERFIL -->
+<div style="flex: 0 0 160px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+    <div style="width: 140px; height: 140px; border-radius: 50%; overflow: hidden; border: 2px solid #ccc; background-color: #f9f9f9;">
+        <img id="fotoVendedor" src="<?php echo $fotoVendedor . '?v=' . time(); ?>" alt="Foto del vendedor" style="width: 100%; height: 100%; object-fit: cover;" />
+
+    </div>
+
+    <!-- Botón para abrir selector -->
+    <button type="button" onclick="document.getElementById('inputFoto').click();" 
+        style="padding: 6px 14px; font-size: 13px; cursor: pointer; border-radius: 6px; border: none; background-color: #3498db; color: white;">
+        Seleccionar Foto
+    </button>
+
+    <!-- Nuevo botón actualizar -->
+    <button type="button" id="btnActualizarFoto" 
+        style="padding: 6px 14px; font-size: 13px; margin-top: 6px; cursor: pointer; border-radius: 6px; border: none; background-color: #27ae60; color: white;">
+        Actualizar Foto
+    </button>
+
+    <!-- Formulario oculto -->
+    <form id="formFoto" method="POST" enctype="multipart/form-data" action="usufoto.php" style="display:none;">
+        <input type="hidden" name="cedula" value="<?php echo htmlspecialchars($datosVendedor['cedula']); ?>">
+        <input type="file" name="foto_perfil" id="inputFoto" accept="image/*">
+    </form>
+</div>
+
+<script>
+    const inputFoto = document.getElementById('inputFoto');
+    const fotoVendedor = document.getElementById('fotoVendedor');
+    const btnActualizarFoto = document.getElementById('btnActualizarFoto');
+    const formFoto = document.getElementById('formFoto');
+
+    // Mostrar la previsualización cuando seleccionas un archivo
+    inputFoto.addEventListener('change', () => {
+        const file = inputFoto.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            fotoVendedor.src = url;
+        }
+    });
+
+    // Enviar formulario al hacer click en actualizar foto
+    btnActualizarFoto.addEventListener('click', () => {
+        if (!inputFoto.files.length) {
+            alert('Por favor selecciona una imagen primero.');
+            return;
+        }
+        
+        const formData = new FormData(formFoto);
+
+        fetch('usufoto.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert('Foto actualizada correctamente.');
+                // Actualiza la imagen con la URL que devuelve el servidor y evita caché
+                fotoVendedor.src = data.urlFoto + '?t=' + new Date().getTime();
+            } else {
+                alert('Error al actualizar foto: ' + data.error);
+            }
+        })
+        .catch(() => alert('Error en la conexión.'));
+    });
+</script>
+
+
+
+        <!-- INFORMACIÓN DEL REGISTRO -->
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #333;">
+            <h2 style="margin: 0 0 10px 0; color: #2ecc71; font-size: 18px;">Información de Registro</h2>
+            <p><strong>Nombre:</strong> <?php echo htmlspecialchars($datosVendedor['nombre']); ?></p>
+            <p><strong>Cédula:</strong> <?php echo htmlspecialchars($datosVendedor['cedula']); ?></p>
+            <p><strong>Día:</strong> <?php echo htmlspecialchars($datosVendedor['dia']); ?></p>
+            <p><strong>Hora Entrada:</strong> <?php echo htmlspecialchars($datosVendedor['entrada']); ?></p>
+            <p><strong>Hora Salida:</strong> <?php echo htmlspecialchars($datosVendedor['salida']); ?></p>
+            <p><strong>Producto:</strong> <?php echo htmlspecialchars($datosVendedor['producto']); ?></p>
+            <p><strong>Zona Autorizada:</strong> <?php echo htmlspecialchars($datosVendedor['zona']); ?></p>
         </div>
-        <?php endif; ?>
+
+        <!-- QR -->
+        <div style="flex: 0 0 160px; display: flex; justify-content: center; align-items: center;">
+            <div id="qrcode" style="width: 140px; height: 140px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+function cerrarModal() {
+    document.getElementById('registroModal').style.display = 'none';
+}
+</script>
+<?php endif; ?>
 
         <!-- Modal para registrar vendedor -->
         <div id="modalRegistroVendedor">
@@ -317,6 +600,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <?php if ($esVendedor): ?>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+        
         <script>
         document.addEventListener("DOMContentLoaded", function () {
             const qrUrl = "https://forcibly-legible-piglet.ngrok-free.app/Plataforma-registro/src/descargar_pdf.php?id=<?php echo $datosVendedor['id']; ?>";
@@ -347,8 +631,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     });
 </script>
-
-
 
 </body>
 </html>

@@ -24,6 +24,32 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
 
 include 'conexion.php';
 
+
+$fotoAdmin = "assets/img/userlogo.png"; // Valor por defecto
+$nombreAdmin = "Administrador"; // Valor por defecto
+
+if (isset($_SESSION['cedula'])) {
+    $cedulaAdmin = $_SESSION['cedula'];
+
+    $stmt = $conn->prepare("SELECT nombre_completo, foto_perfil FROM usuregistro WHERE cedula = ?");
+    if ($stmt) {
+        $stmt->bind_param("s", $cedulaAdmin);
+        $stmt->execute();
+        $stmt->bind_result($nombreCompleto, $fotoPerfil);
+        if ($stmt->fetch()) {
+            if (!empty($fotoPerfil) && file_exists("uploads/$fotoPerfil")) {
+                $fotoAdmin = "uploads/$fotoPerfil";
+            }
+            if (!empty($nombreCompleto)) {
+                $nombreAdmin = $nombreCompleto;
+            }
+        }
+        $stmt->close();
+    } else {
+        die("Error al preparar la consulta: " . $conn->error);
+    }
+}
+
 // Agregar vendedor
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['agregar'])) {
     $nombre = $_POST['nombre'];
@@ -148,94 +174,28 @@ $resultado_inactivos = $conn->query($consulta_inactivos);
 </div>
 
     <!-- Sidebar -->
-     
-    <div class="sidebar">
-        <div class="logo">
-            <img src="assets/img/userlogo.png" alt="Admin Logo"> Administrador
-        </div>
-        <ul>
-            <li><a href="#" id="verPerfilBtn"><b>Ver perfil</b></a></li>
-            <li><a href="administrador.php">Ver registros actuales</a></li>
-            <li><a href="administrador.php?agregar_registro=true">Agregar un nuevo registro</a></li>
-        </ul>
-    </div>
 
-    <!-- Modal de Perfil -->
-<div id="perfilModal" class="modal" style="display:none;">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <div id="perfilContenido"></div>
+    <div class="sidebar">
+    <div class="logo" style="display: flex; align-items: center; gap: 10px; padding: 10px;">
+        <img src="<?php echo $fotoAdmin; ?>" alt="Admin Foto" style="width: 40px; height: 40px; border-radius: 50%;">
+        <span style="font-weight: bold;"><?php echo htmlspecialchars($nombreAdmin); ?></span>
     </div>
+<br><br>
+    <ul>
+        <li><a href="#" id="verPerfilBtn"><b>Ver perfil</b></a></li>
+        <li><a href="administrador.php">Ver registros actuales</a></li>
+        <li><a href="administrador.php?agregar_registro=true">Agregar un nuevo registro</a></li>
+    </ul>
 </div>
 
-<!-- Estilos del modal -->
-<style>
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 9999;
-    left: 0; top: 0;
-    width: 100%; height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.5);
-}
 
-.modal-content {
-    background-color: #fff;
-    margin: 10% auto;
-    padding: 20px;
-    border-radius: 10px;
-    width: 400px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    text-align: left;
-}
-
-.close {
-    color: #aaa;
-    float: right;
-    font-size: 24px;
-    font-weight: bold;
-    cursor: pointer;
-}
-</style>
-
-
-
-<script>
-document.getElementById('verPerfilBtn').addEventListener('click', function(e) {
-    e.preventDefault();
-
-    fetch('adminperfil.php')
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            alert(data.error);
-            return;
-        }
-
-        const contenido = `
-            <p><strong>Nombre completo:</strong> ${data.nombre_completo}</p>
-            <p><strong>Cédula:</strong> ${data.cedula}</p>
-            <p><strong>Correo:</strong> ${data.correo}</p>
-            <p><strong>Fecha de registro:</strong> ${data.fecha_registro}</p>
-            <p><strong>Rol:</strong> ${data.role}</p>
-        `;
-
-        document.getElementById('contenidoPerfil').innerHTML = contenido;
-        document.getElementById('modalPerfil').style.display = 'flex';
-    })
-    .catch(error => {
-        console.error('Error al cargar el perfil:', error);
-        alert('Error al cargar el perfil');
-    });
-});
-
-function cerrarModal() {
-    document.getElementById('modalPerfil').style.display = 'none';
-}
-</script>
-
-
+  <!-- Modal -->
+<div id="perfilModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999;">
+  <div class="modal-content" style="background:#fff; margin:10% auto; padding:20px; width:75%; max-width:500px; border-radius:8px;">
+    <span id="cerrarModal" style="float:right; cursor:pointer; font-size:24px;">&times;</span>
+    <div id="contenidoPerfil">Cargando...</div>
+  </div>
+</div>
     <!-- Menu Toggle Button -->
     <div class="menu-toggle" onclick="toggleMenu()">
         <i class="fas fa-bars"></i>
@@ -554,30 +514,26 @@ function cerrarEdicion() {
 <script>
 document.getElementById('verPerfilBtn').addEventListener('click', function(e) {
     e.preventDefault();
+
+    // Mostrar el modal
+    document.getElementById('perfilModal').style.display = 'block';
+
+    // Cargar el contenido desde adminperfil.php
     fetch('adminperfil.php')
         .then(response => response.text())
-        .then(html => {
-            document.getElementById('perfilContenido').innerHTML = html;
-            document.getElementById('perfilModal').style.display = 'block';
+        .then(data => {
+            document.getElementById('contenidoPerfil').innerHTML = data;
         })
-        .catch(err => {
-            alert('Error al cargar el perfil.');
-            console.error(err);
+        .catch(error => {
+            document.getElementById('contenidoPerfil').innerHTML = '<p>Error al cargar el perfil.</p>';
+            console.error(error);
         });
 });
 
-document.querySelector('.close').addEventListener('click', function() {
+document.getElementById('cerrarModal').addEventListener('click', function() {
     document.getElementById('perfilModal').style.display = 'none';
 });
-
-window.onclick = function(event) {
-    const modal = document.getElementById('perfilModal');
-    if (event.target === modal) {
-        modal.style.display = 'none';
-    }
-};
 </script>
-
 
  
 </body>
