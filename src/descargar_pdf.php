@@ -24,14 +24,20 @@ if ($id <= 0) {
     die("ID inválido.");
 }
 
-// Consulta a la base de datos sin rol
-$sql = "SELECT nombre, cedula, zona FROM vendedores WHERE id = $id LIMIT 1";
+// Consulta a la base de datos para obtener datos del vendedor y su foto
+$sql = "SELECT v.nombre, v.cedula, v.zona, v.producto, u.foto_perfil 
+        FROM vendedores v 
+        INNER JOIN usuregistro u ON v.cedula = u.cedula 
+        WHERE v.id = $id 
+        LIMIT 1";
 $result = $conn->query($sql);
+
 if (!$result || $result->num_rows == 0) {
     die("No se encontró el vendedor con ID = $id");
 }
 
 $vendedor = $result->fetch_assoc();
+
 
 // Dimensiones carnet tipo ID (vertical)
 $pdfWidth = 65;  // mm
@@ -49,19 +55,29 @@ if (file_exists($logoPath)) {
 }
 
 // ---------------- Foto con marco ----------------
-$fotoPath = 'assets/img/carnetlogo.png';
+$fotoPath = $vendedor['foto_perfil']; // Esto debería contener la ruta como: 'uploads/fotos/12345678.jpg'
 $fotoW = 22;
 $fotoH = 26;
 $espacioEntreLogoYFoto = -31;
 $fotoY = $logoY + $logoWidth + $espacioEntreLogoYFoto;
 $fotoX = ($pdfWidth - $fotoW) / 2;
 
-if (file_exists($fotoPath)) {
+if (!empty($fotoPath) && file_exists($fotoPath)) {
     $pdf->SetDrawColor(0, 0, 0);
     $pdf->SetLineWidth(0.9);
     $pdf->Rect($fotoX, $fotoY, $fotoW, $fotoH);
     $pdf->SetLineWidth(0.2);
     $pdf->Image($fotoPath, $fotoX, $fotoY, $fotoW, $fotoH);
+} else {
+    // Imagen por defecto si no se encuentra la foto personalizada
+    $fotoDefault = 'assets/img/carnetlogo.png';
+    if (file_exists($fotoDefault)) {
+        $pdf->SetDrawColor(0, 0, 0);
+        $pdf->SetLineWidth(0.9);
+        $pdf->Rect($fotoX, $fotoY, $fotoW, $fotoH);
+        $pdf->SetLineWidth(0.2);
+        $pdf->Image($fotoDefault, $fotoX, $fotoY, $fotoW, $fotoH);
+    }
 }
 
 // ---------------- Datos del vendedor ----------------
@@ -127,19 +143,18 @@ if ($line) {
     $pdf->Ln(4);
 }
 
-
-// ---------------- Mensaje pérdida ----------------
-$textoNegrita = utf8_decode("En caso de pérdida,");
+// ---------------- Producto que vende ----------------
+$textoProductoTitulo = utf8_decode("Producto autorizado:");
 $pdf->SetFont('Arial', 'B', 9);
-$xPos = ($pdfWidth - $pdf->GetStringWidth($textoNegrita)) / 2;
+$xPos = ($pdfWidth - $pdf->GetStringWidth($textoProductoTitulo)) / 2;
 $pdf->SetXY($xPos, $pdf->GetY());
-$pdf->Cell($pdf->GetStringWidth($textoNegrita), 5, $textoNegrita, 0, 1, 'C');
+$pdf->Cell($pdf->GetStringWidth($textoProductoTitulo), 5, $textoProductoTitulo, 0, 1, 'C');
 
-$textoNormal = utf8_decode("el portador debe tramitar un nuevo carnet en las oficinas correspondientes para continuar con su autorización de venta.");
+// Producto del vendedor
+$productoTexto = utf8_decode($vendedor['producto']);
 $pdf->SetFont('Arial', '', 9);
-
 $maxWidth = $pdfWidth - 10;
-$words = explode(' ', $textoNormal);
+$words = explode(' ', $productoTexto);
 $line = '';
 $yCurrent = $pdf->GetY();
 
@@ -161,16 +176,21 @@ if ($line) {
     $xPos = ($pdfWidth - $lineWidth) / 2;
     $pdf->SetXY($xPos, $yCurrent);
     $pdf->Cell($lineWidth, 5, $line, 0, 1, 'C');
+    $pdf->Ln(3);
 }
 
-// ---------------- Aviso restricción ----------------
-$avisoRestriccion = utf8_decode("Este carnet es válido únicamente dentro de las instalaciones autorizadas.");
-
-$pdf->SetY($pdf->GetY() + 7);
+// ---------------- Mensaje pérdida ----------------
+$textoNegrita = utf8_decode("En caso de pérdida,");
 $pdf->SetFont('Arial', 'B', 9);
+$xPos = ($pdfWidth - $pdf->GetStringWidth($textoNegrita)) / 2;
+$pdf->SetXY($xPos, $pdf->GetY());
+$pdf->Cell($pdf->GetStringWidth($textoNegrita), 5, $textoNegrita, 0, 1, 'C');
+
+$textoNormal = utf8_decode("el portador debe tramitar un nuevo carnet en las oficinas correspondientes para continuar con su autorización de venta.");
+$pdf->SetFont('Arial', '', 9);
 
 $maxWidth = $pdfWidth - 10;
-$words = explode(' ', $avisoRestriccion);
+$words = explode(' ', $textoNormal);
 $line = '';
 $yCurrent = $pdf->GetY();
 

@@ -7,10 +7,95 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'user') {
     exit();
 }
 
+require 'conexion.php';
+
+// Datos de sesión
+$cedula = $_SESSION['username']; // la cédula es el "username"
+$nombre = htmlspecialchars($_SESSION['nombre']); // nombre completo desde sesión
+
+// Verificar si el usuario tiene un registro en la tabla vendedores
+$stmt = $conn->prepare("SELECT activo FROM vendedores WHERE cedula = ? ORDER BY id DESC LIMIT 1");
+$stmt->bind_param("s", $cedula);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows > 0) {
+    $fila = $result->fetch_assoc();
+    if ($fila['activo'] == 0) {
+        // Overlay estilizado para cuenta en revisión
+        $overlayHTML = "
+        <style>
+          #bloqueo-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            box-sizing: border-box;
+          }
+          #bloqueo-overlay .content-box {
+            background: #fff;
+            padding: 40px 50px;
+            border-radius: 12px;
+            box-shadow: 0 12px 32px rgba(217, 83, 79, 0.2);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            color: #d9534f;
+          }
+          #bloqueo-overlay .content-box h2 {
+            font-weight: 700;
+            font-size: 26px;
+            margin-bottom: 20px;
+          }
+          #bloqueo-overlay .content-box p {
+            font-size: 16px;
+            margin-bottom: 40px;
+            line-height: 1.5;
+          }
+          #bloqueo-overlay .logout-btn {
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 6px 16px rgba(217, 83, 79, 0.5);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            user-select: none;
+          }
+          #bloqueo-overlay .logout-btn:hover {
+            background-color: #c9302c;
+            box-shadow: 0 8px 20px rgba(201, 48, 44, 0.7);
+          }
+        </style>
+
+        <div id='bloqueo-overlay'>
+          <div class='content-box'>
+            <h2>¡Cuenta en revisión!</h2>
+            <p>
+              Un administrador está evaluando su solicitud.<br>
+              Por favor, espere hasta que su cuenta sea activada.
+            </p>
+            <button class='logout-btn' onclick=\"location.href='logout.php'\">Cerrar Sesión</button>
+          </div>
+        </div>
+        ";
+        echo $overlayHTML;
+        exit();
+    }
+}
+$stmt->close();
+
 // Procesar registro si viene por POST
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    require 'conexion.php';
-
     $nombre   = $_POST['nombre'];
     $cedula   = $_POST['cedula'];
     $dia      = $_POST['dia'];
@@ -20,34 +105,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $zona     = $_POST['zona'];
 
     if ($dia && $entrada && $salida && $producto && $zona && ($salida > $entrada)) {
-        $sql = "INSERT INTO vendedores (nombre, cedula, dia, entrada, salida, producto, zona) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        // Guardar como inactivo (activo = 0)
+        $sql = "INSERT INTO vendedores (nombre, cedula, dia, entrada, salida, producto, zona, activo)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 0)";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("sssssss", $nombre, $cedula, $dia, $entrada, $salida, $producto, $zona);
 
         if ($stmt->execute()) {
-            echo "<script>alert('Registro exitoso');</script>";
+            echo "
+            <script>
+                alert('Registro exitoso. Su solicitud está en revisión.');
+                window.location.reload(); // Forzar recarga para mostrar el overlay
+            </script>
+            ";
         } else {
             echo "<script>alert('Error al registrar');</script>";
         }
 
         $stmt->close();
-        $conn->close();
     } else {
         echo "<script>alert('Por favor complete todos los campos correctamente');</script>";
     }
 }
-
-// Verificación repetida por seguridad
-if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'user') {
-    header("Location: index.php");
-    exit();
-}
-
-require 'conexion.php';
-
-// Datos de sesión
-$cedula = $_SESSION['username']; // la cédula es el "username"
-$nombre = htmlspecialchars($_SESSION['nombre']); // nombre completo desde sesión
 
 // Verificar si ya es vendedor
 $stmt = $conn->prepare("SELECT * FROM vendedores WHERE cedula = ?");
@@ -150,6 +229,7 @@ $conn->close();
                 #modalRegistroVendedor .modal-content button.submit-btn:hover {
                     background: #219150;
                 }
+
                 
             </style>
         </head>
@@ -325,10 +405,6 @@ function toggleFAQ(header) {
                         <i class="fas fa-list"></i>
                         Ver Registro
                     </button>
-                    <button class="btn-large" onclick="location.href='mis_ventas.php'">
-                        <i class="fas fa-chart-line"></i>
-                        Mis Ventas
-                    </button>
                     <button class="btn-large" onclick="document.getElementById('perfilModal').style.display='flex'">
     <i class="fas fa-id-badge"></i>
     Ver Perfil
@@ -491,112 +567,122 @@ function cerrarModal() {
 <?php endif; ?>
 
         <!-- Modal para registrar vendedor -->
-        <div id="modalRegistroVendedor">
-            <div class="modal-content">
-                <button class="close-btn" onclick="cerrarModalRegistro()">&times;</button>
-                <h2>Registro de Vendedor</h2>
-                <form id="formRegistroVendedor" action="" method="POST">
-                    <label for="nombre">Nombre completo:</label>
-                    <input type="text" id="nombre" name="nombre" value="<?php echo $nombre; ?>" readonly>
+<div id="modalRegistroVendedor">
+    <div class="modal-content">
+        <button class="close-btn" onclick="cerrarModalRegistro()">&times;</button>
+        <h2>Registro de Vendedor</h2>
+        <form id="formRegistroVendedor" action="" method="POST">
+            <label for="nombre">Nombre completo:</label>
+            <input type="text" id="nombre" name="nombre" value="<?php echo strtoupper($nombre); ?>" readonly>
 
-                    <label for="cedula">Cédula:</label>
-                    <input type="text" id="cedula" name="cedula" value="<?php echo $cedula; ?>" readonly>
+            <label for="cedula">Cédula:</label>
+            <input type="text" id="cedula" name="cedula" value="<?php echo $cedula; ?>" readonly>
 
-                    <label for="dia">Día:</label>
-                    <select id="dia" name="dia" required>
-                        <option value="">Selecciona un día</option>
-                        <option value="Lunes">Lunes</option>
-                        <option value="Martes">Martes</option>
-                        <option value="Miércoles">Miércoles</option>
-                        <option value="Jueves">Jueves</option>
-                        <option value="Viernes">Viernes</option>
-                        <option value="Sábado">Sábado</option>
-                        <option value="Domingo">Domingo</option>
-                    </select>
+            <label for="correo">Correo Gmail:</label>
+            <input type="email" id="correo" name="correo" required placeholder="ejemplo@gmail.com">
 
-                    <label for="entrada">Hora Entrada:</label>
-                    <input type="time" id="entrada" name="entrada" required>
+            <label for="dia">Día:</label>
+            <select id="dia" name="dia" required>
+                <option value="">Selecciona un día</option>
+                <option value="Lunes">Lunes</option>
+                <option value="Martes">Martes</option>
+                <option value="Miércoles">Miércoles</option>
+                <option value="Jueves">Jueves</option>
+                <option value="Viernes">Viernes</option>
+                <option value="Sábado">Sábado</option>
+                <option value="Domingo">Domingo</option>
+            </select>
 
-                    <label for="salida">Hora Salida:</label>
-                    <input type="time" id="salida" name="salida" required>
+            <label for="entrada">Hora Entrada:</label>
+            <input type="time" id="entrada" name="entrada" required>
 
-                    <label for="producto">Producto:</label>
-                    <input type="text" id="producto" name="producto" maxlength="50" required>
+            <label for="salida">Hora Salida:</label>
+            <input type="time" id="salida" name="salida" required>
 
-                    <label for="zona">Zona Autorizada:</label>
-                    <select name="zona" id="zona" required>
-                        <option value="">Seleccione una zona</option>
-                        <option value="Facultad de Ingenierías">Facultad de Ingenierías</option>
-                        <option value="Facultad de Ciencias Sociales y de Servicios">Facultad de Ciencias Sociales y de Servicios</option>
-                        <option value="Facultad de Ciencias Administrativas y Económicas">Facultad de Ciencias Administrativas y Económicas</option>
-                        <option value="Facultad de Pedagogía">Facultad de Pedagogía</option>
-                    </select>
+            <label for="producto">Producto:</label>
+            <input type="text" id="producto" name="producto" maxlength="50" required>
 
-                    <button type="submit" class="submit-btn">Registrar</button>
-                </form>
-            </div>
-        </div>
+            <label for="zona">Zona Autorizada:</label>
+            <select name="zona" id="zona" required>
+                <option value="">Seleccione una zona</option>
+                <option value="Facultad de Ingenierías">Facultad de Ingenierías</option>
+                <option value="Facultad de Ciencias Sociales y de Servicios">Facultad de Ciencias Sociales y de Servicios</option>
+                <option value="Facultad de Ciencias Administrativas y Económicas">Facultad de Ciencias Administrativas y Económicas</option>
+                <option value="Facultad de Pedagogía">Facultad de Pedagogía</option>
+            </select>
 
-        <script>
-        function mostrarRegistro() {
-            var modal = document.getElementById('registroModal');
-            if (modal) {
-                modal.style.display = 'flex';
-            } else {
-                alert("No estás registrado como vendedor.");
-            }
+            <button type="submit" class="submit-btn">Registrar</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function mostrarRegistro() {
+    var modal = document.getElementById('registroModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    } else {
+        alert("No estás registrado como vendedor.");
+    }
+}
+
+function cerrarModal() {
+    document.getElementById('registroModal').style.display = 'none';
+}
+
+function abrirModalRegistro() {
+    document.getElementById('modalRegistroVendedor').style.display = 'flex';
+}
+
+function cerrarModalRegistro() {
+    document.getElementById('modalRegistroVendedor').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Deshabilitar botón si ya es vendedor
+    <?php if ($esVendedor): ?>
+        const btnRegistro = document.getElementById('btnRegistroVendedor');
+        if (btnRegistro) {
+            btnRegistro.disabled = true;
+            btnRegistro.style.opacity = "0.5";
+            btnRegistro.style.cursor = "not-allowed";
+            btnRegistro.title = "Ya estás registrado como vendedor";
+        }
+    <?php endif; ?>
+
+    // Validación del formulario antes de enviar
+    const formRegistro = document.getElementById('formRegistroVendedor');
+    formRegistro.addEventListener('submit', function(e) {
+        const dia = formRegistro.dia.value.trim();
+        const entrada = formRegistro.entrada.value;
+        const salida = formRegistro.salida.value;
+        const producto = formRegistro.producto.value.trim();
+        const zona = formRegistro.zona.value.trim();
+        const correo = formRegistro.correo.value.trim();
+
+        let errores = [];
+
+        const patronGmail = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+        if (!patronGmail.test(correo)) {
+            errores.push("El correo debe ser una cuenta de Gmail válida.");
         }
 
-        function cerrarModal() {
-            document.getElementById('registroModal').style.display = 'none';
+        if (!dia) errores.push("Selecciona un día válido.");
+        if (!entrada) errores.push("Ingresa hora de entrada.");
+        if (!salida) errores.push("Ingresa hora de salida.");
+        if (entrada && salida && salida <= entrada) errores.push("La hora de salida debe ser mayor que la de entrada.");
+        if (!producto) errores.push("El producto no puede estar vacío.");
+        if (producto.length > 50) errores.push("El producto debe tener máximo 50 caracteres.");
+        if (!zona) errores.push("Selecciona una zona autorizada.");
+
+        if (errores.length > 0) {
+            e.preventDefault();
+            alert("Por favor corrige los siguientes errores:\n- " + errores.join("\n- "));
         }
+    });
+});
+</script>
 
-        function abrirModalRegistro() {
-            document.getElementById('modalRegistroVendedor').style.display = 'flex';
-        }
-
-        function cerrarModalRegistro() {
-            document.getElementById('modalRegistroVendedor').style.display = 'none';
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            // Deshabilitar botón si ya es vendedor
-            <?php if ($esVendedor): ?>
-                const btnRegistro = document.getElementById('btnRegistroVendedor');
-                if (btnRegistro) {
-                    btnRegistro.disabled = true;
-                    btnRegistro.style.opacity = "0.5";
-                    btnRegistro.style.cursor = "not-allowed";
-                    btnRegistro.title = "Ya estás registrado como vendedor";
-                }
-            <?php endif; ?>
-
-            // Validación del formulario antes de enviar
-            const formRegistro = document.getElementById('formRegistroVendedor');
-            formRegistro.addEventListener('submit', function(e) {
-                const dia = formRegistro.dia.value.trim();
-                const entrada = formRegistro.entrada.value;
-                const salida = formRegistro.salida.value;
-                const producto = formRegistro.producto.value.trim();
-                const zona = formRegistro.zona.value.trim();
-
-                let errores = [];
-
-                if (!dia) errores.push("Selecciona un día válido.");
-                if (!entrada) errores.push("Ingresa hora de entrada.");
-                if (!salida) errores.push("Ingresa hora de salida.");
-                if (entrada && salida && salida <= entrada) errores.push("La hora de salida debe ser mayor que la de entrada.");
-                if (!producto) errores.push("El producto no puede estar vacío.");
-                if (producto.length > 50) errores.push("El producto debe tener máximo 50 caracteres.");
-                if (!zona) errores.push("Selecciona una zona autorizada.");
-
-                if (errores.length > 0) {
-                    e.preventDefault();
-                    alert("Por favor corrige los siguientes errores:\n- " + errores.join("\n- "));
-                }
-            });
-        });
-        </script>
 
         <?php if ($esVendedor): ?>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -614,6 +700,7 @@ function cerrarModal() {
             });
         });
         </script>
+        
         <?php endif; ?>
 
         <script>

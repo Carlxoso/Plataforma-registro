@@ -75,7 +75,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['agregar'])) {
         echo "<script>alert('Error: Ya existe un vendedor con esa cédula'); window.location.href='administrador.php?agregar_registro=true';</script>";
     } else {
         $stmt->close();
-        $stmt = $conn->prepare("INSERT INTO vendedores (nombre, cedula, dia, entrada, salida, producto, zona, fecha_registro) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
+        $stmt = $conn->prepare("INSERT INTO vendedores (nombre, cedula, dia, entrada, salida, producto, zona, fecha_registro, activo) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 0)");
         $stmt->bind_param("sssssss", $nombre, $cedula, $dia, $entrada, $salida, $producto, $zona);
 
         $stmt->execute();
