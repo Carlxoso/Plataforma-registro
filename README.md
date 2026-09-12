@@ -1,4 +1,8 @@
 # Plataforma de Registro
+Plataforma web desarrollada para gestionar el registro, autenticación y administración de usuarios.
+Integra PHP, MySQL, JavaScript, CSS y FPDF para la gestión de información, perfiles y generación de documentos PDF.
+
+# Plataforma de Registro
 
 ## Descripción
 
